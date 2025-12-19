@@ -2,8 +2,11 @@
 
 import React, { useState, useMemo, useRef, ChangeEvent, useEffect } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { saveUser, findUser, User } from '@/lib/dummyDb';
 
 const Page = () => {
+  const router = useRouter();
   const [activeForm, setActiveForm] = useState<'login' | 'register' | 'forgotPassword'>('login');
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   
@@ -135,9 +138,58 @@ const Page = () => {
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      console.log('Form submitted successfully');
-      console.log({ fullName, email, countryCode, phoneNumber, password, instagram, tiktok, facebook });
+    if (!validateForm()) {
+      return;
+    }
+
+    if (activeForm === 'login') {
+      const loginIdentifier = loginMethod === 'email' ? email : `${countryCode}${phoneNumber}`;
+      const user = findUser(loginIdentifier, password);
+
+      if (user) {
+        localStorage.setItem('loggedInUser', JSON.stringify(user));
+        alert('Login Successful!');
+        router.push('/dashboard');
+      } else {
+        alert('Login Failed! Incorrect credentials or user not found.');
+        const goToRegister = window.confirm('User not found. Do you want to create a new account?');
+        if (goToRegister) {
+          setActiveForm('register');
+        }
+      }
+    }
+
+    if (activeForm === 'register') {
+      // --- PERBAIKAN 1: Hapus tipe 'User' agar sesuai dengan fungsi saveUser ---
+      const newUser = {
+        fullName,
+        email,
+        countryCode,
+        phoneNumber,
+        password,
+        instagram,
+        tiktok,
+        facebook,
+        idCardImage: idCardImage || undefined,
+      };
+
+      try {
+        saveUser(newUser);
+        alert('Registration Successful! Please login.');
+        setActiveForm('login');
+        setFullName('');
+        setEmail('');
+        setPhoneNumber('');
+        setPassword('');
+      } catch (error: any) {
+        alert(`Registration Failed: ${error.message}`);
+      }
+    }
+
+    if (activeForm === 'forgotPassword') {
+      const forgotIdentifier = email || `${countryCode}${phoneNumber}`;
+      alert(`If an account exists for ${forgotIdentifier}, a password reset link has been "sent".`);
+      setActiveForm('login');
     }
   };
   
@@ -187,25 +239,24 @@ const Page = () => {
                     <button type="button" onClick={() => handleLoginMethodChange('phone')} className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-300 ${loginMethod === 'phone' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>Phone Number</button>
                   </div>
 
-                  {/* --- PERBAIKAN 1: Mengurangi jarak antar field --- */}
                   <form className="space-y-4" onSubmit={handleSubmit}>
                     <div className="relative h-24">
                       <div className={`absolute inset-0 transition-opacity duration-300 ease-in-out ${isFieldVisible ? 'opacity-100' : 'opacity-0'}`}>
                         {loginMethod === 'email' ? (
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                            {/* --- PERBAIKAN 3: Menambahkan text-sm untuk konsistensi font --- */}
-                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 sm:p-2.5 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                            {/* --- PERBAIKAN 2: Mengurangi padding di mobile --- */}
+                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                             {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
                           </div>
                         ) : (
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                             <div className="flex">
-                              <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex-shrink-0 px-3 py-2 sm:py-2.5 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                              <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex-shrink-0 px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                 {countryCodes.map((c) => (<option key={c.code} value={c.code}>{c.abbr} {c.code}</option>))}
                               </select>
-                              <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="812-3456-7890" className="w-full p-2 sm:p-2.5 md:p-3 text-sm text-gray-900 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                              <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="812-3456-7890" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                             </div>
                             {phoneNumberError && <p className="text-red-500 text-xs mt-1">{phoneNumberError}</p>}
                           </div>
@@ -215,7 +266,7 @@ const Page = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                      <input type="password" value={password} onChange={handlePasswordChange} className="w-full p-2 sm:p-2.5 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                      <input type="password" value={password} onChange={handlePasswordChange} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                       <div className="mt-2 text-xs">
                         <div className={`flex items-center ${hasUppercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasUppercase ? '✓' : '○'}</span><span>Must contain uppercase letter</span></div>
                         <div className={`flex items-center ${hasLowercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasLowercase ? '✓' : '○'}</span><span>Must contain lowercase letter</span></div>
@@ -223,7 +274,7 @@ const Page = () => {
                       </div>
                     </div>
                     <div className="flex items-center"><input id="remember" type="checkbox" className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-300 rounded" /><label htmlFor="remember" className="ml-2 block text-sm text-gray-700">Remember me</label></div>
-                    <button type="submit" className="w-full p-2 sm:p-2.5 md:p-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium">Sign in</button>
+                    <button type="submit" className="w-full p-2 sm:p-2 md:p-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium">Sign in</button>
                     <div className="text-center space-y-2 text-sm">
                       <button type="button" onClick={() => handleFormSwitch('register')} className="text-blue-500 hover:text-blue-600 transition-colors block">Don't have an account? Register</button>
                       <button type="button" onClick={() => handleFormSwitch('forgotPassword')} className="text-blue-500 hover:text-blue-600 transition-colors block">Forgot Password?</button>
@@ -236,23 +287,23 @@ const Page = () => {
               <div className="w-full flex-shrink-0 flex items-center justify-center p-4 sm:p-6 md:p-12">
                 <div className="w-full md:max-w-sm">
                   <h2 className="text-lg sm:text-xl md:text-3xl font-semibold mb-6 text-gray-800">Create a New Account</h2>
-                  {/* --- PERBAIKAN 1: Mengurangi jarak antar field --- */}
                   <form className="space-y-4" onSubmit={handleSubmit}>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label><input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full p-2 sm:p-2.5 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />{fullNameError && <p className="text-red-500 text-xs mt-1">{fullNameError}</p>}</div>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 sm:p-2.5 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />{emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}</div>
+                    {/* --- PERBAIKAN 2: Mengurangi padding di mobile --- */}
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label><input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />{fullNameError && <p className="text-red-500 text-xs mt-1">{fullNameError}</p>}</div>
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />{emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}</div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
                       <div className="flex">
-                        <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex-shrink-0 px-3 py-2 sm:py-2.5 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                        <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex-shrink-0 px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
                           {countryCodes.map((c) => (<option key={c.code} value={c.code}>{c.abbr} {c.code}</option>))}
                         </select>
-                        <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="812-3456-7890" className="w-full p-2 sm:p-2.5 md:p-3 text-sm text-gray-900 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                        <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="812-3456-7890" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                       </div>
                       {phoneNumberError && <p className="text-red-500 text-xs mt-1">{phoneNumberError}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-                      <input type="password" value={password} onChange={handlePasswordChange} className="w-full p-2 sm:p-2.5 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                      <input type="password" value={password} onChange={handlePasswordChange} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                       <div className="mt-2 text-xs">
                         <div className={`flex items-center ${hasUppercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasUppercase ? '✓' : '○'}</span><span>Must contain uppercase letter</span></div>
                         <div className={`flex items-center ${hasLowercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasLowercase ? '✓' : '○'}</span><span>Must contain lowercase letter</span></div>
@@ -262,8 +313,8 @@ const Page = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">ID Card Image *</label>
                       <div className="flex items-center space-x-3">
-                        {/* --- PERBAIKAN 2: Tombol Choose File sudah konsisten --- */}
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="px-3 py-2 sm:py-2.5 md:py-3 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">Choose File</button>
+                        {/* --- PERBAIKAN 2: Mengurangi padding di mobile --- */}
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="px-3 py-2 sm:py-2 md:py-3 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">Choose File</button>
                         <span className="text-sm text-gray-600">{idCardImage ? 'Image selected' : 'No file chosen'}</span>
                       </div>
                       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
@@ -272,26 +323,26 @@ const Page = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Instagram (Optional)</label>
                       <div className="flex">
-                        {/* --- PERBAIKAN 3: Font dan padding sudah konsisten --- */}
-                        <span className="inline-flex items-center px-2 sm:px-2.5 md:px-3 py-2 sm:py-2.5 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
-                        <input type="text" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="username" className="w-full p-2 sm:p-2.5 md:p-3 text-sm text-gray-900 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                        {/* --- PERBAIKAN 2: Mengurangi padding di mobile --- */}
+                        <span className="inline-flex items-center px-2 sm:px-2 md:px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
+                        <input type="text" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="username" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">TikTok (Optional)</label>
                       <div className="flex">
-                        <span className="inline-flex items-center px-2 sm:px-2.5 md:px-3 py-2 sm:py-2.5 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
-                        <input type="text" value={tiktok} onChange={(e) => setTiktok(e.target.value)} placeholder="username" className="w-full p-2 sm:p-2.5 md:p-3 text-sm text-gray-900 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                        <span className="inline-flex items-center px-2 sm:px-2 md:px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
+                        <input type="text" value={tiktok} onChange={(e) => setTiktok(e.target.value)} placeholder="username" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Facebook (Optional)</label>
                       <div className="flex">
-                        <span className="inline-flex items-center px-2 sm:px-2.5 md:px-3 py-2 sm:py-2.5 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
-                        <input type="text" value={facebook} onChange={(e) => setFacebook(e.target.value)} placeholder="username" className="w-full p-2 sm:p-2.5 md:p-3 text-sm text-gray-900 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                        <span className="inline-flex items-center px-2 sm:px-2 md:px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
+                        <input type="text" value={facebook} onChange={(e) => setFacebook(e.target.value)} placeholder="username" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                       </div>
                     </div>
-                    <button type="submit" className="w-full p-2 sm:p-2.5 md:p-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium">Register</button>
+                    <button type="submit" className="w-full p-2 sm:p-2 md:p-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium">Register</button>
                     <div className="text-center text-sm"><button type="button" onClick={() => handleFormSwitch('login')} className="text-blue-500 hover:text-blue-600 transition-colors">Already have an account? Login</button></div>
                   </form>
                 </div>
@@ -301,20 +352,20 @@ const Page = () => {
               <div className="w-full flex-shrink-0 flex items-center justify-center p-4 sm:p-6 md:p-12">
                 <div className="w-full md:max-w-sm">
                   <h2 className="text-lg sm:text-xl md:text-3xl font-semibold mb-6 text-gray-800">Reset Your Password</h2>
-                  {/* --- PERBAIKAN 1: Mengurangi jarak antar field --- */}
                   <form className="space-y-4" onSubmit={handleSubmit}>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 sm:p-2.5 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />{emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}</div>
+                    {/* --- PERBAIKAN 2: Mengurangi padding di mobile --- */}
+                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />{emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}</div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
                       <div className="flex">
-                        <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex-shrink-0 px-3 py-2 sm:py-2.5 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
+                        <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex-shrink-0 px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
                           {countryCodes.map((c) => (<option key={c.code} value={c.code}>{c.abbr} {c.code}</option>))}
                         </select>
-                        <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="812-3456-7890" className="w-full p-2 sm:p-2.5 md:p-3 text-sm text-gray-900 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />
+                        <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="812-3456-7890" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />
                       </div>
                       {phoneNumberError && <p className="text-red-500 text-xs mt-1">{phoneNumberError}</p>}
                     </div>
-                    <button type="submit" className="w-full p-2 sm:p-2.5 md:p-3 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors font-medium">Reset Password</button>
+                    <button type="submit" className="w-full p-2 sm:p-2 md:p-3 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors font-medium">Reset Password</button>
                     <div className="text-center text-sm"><button type="button" onClick={() => handleFormSwitch('login')} className="text-blue-500 hover:text-blue-600 transition-colors">Back to Login</button></div>
                   </form>
                 </div>
