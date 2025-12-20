@@ -3,10 +3,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { User } from '@/types/user';
+import { User } from '@/types'; // Menggunakan types/index.ts
 import { findUser, saveUser } from '@/lib/dummyDb'; // Menggunakan fungsi yang sudah ada
 
-// Mendefinisikan tipe untuk data registrasi, diambil dari User interface
+// Tipe data registrasi, diambil dari User interface
 type RegisterData = Omit<User, 'id' | 'role' | 'status' | 'createdAt'>;
 
 interface AuthContextType {
@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const foundUser = findUser(emailOrPhone, password);
       if (foundUser) {
-        // Menyimpan ke localStorage tetapi juga ke state React
+        // Menyimpan ke localStorage dan state React
         localStorage.setItem('loggedInUser', JSON.stringify(foundUser));
         setUser(foundUser);
         return true;
@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     } catch (error: any) {
       console.error('Registration error:', error);
-      // Melempar error agar bisa ditangani di komponen UI
+      // Melempar error agar bisa ditangani di UI
       throw error;
     } finally {
       setLoading(false);

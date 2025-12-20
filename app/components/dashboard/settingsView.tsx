@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { User } from '@/types/user';
+import { User } from '@/types';
 import { useToggle } from '@/hooks/useToggle';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -13,20 +13,35 @@ interface SettingsViewProps {
 }
 
 const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
-  // State untuk form password
+  // State untuk form password (menggunakan aturan baru)
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   
-  // State untuk form profil, hanya nomor HP yang bisa diubah
+  // State untuk form profil
   const [phoneNumber, setPhoneNumber] = useState(user.phoneNumber);
 
   // State untuk kontrol visibilitas form
   const [isProfileFormOpen, toggleProfileForm] = useToggle(false);
   const [isPasswordFormOpen, togglePasswordForm] = useToggle(false);
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
+  // Fungsi validasi password yang sama dengan di halaman login
+  const [hasUppercase, setHasUppercase] = useState(false);
+  const [hasLowercase, setHasLowercase] = useState(false);
+  const [hasNumber, setHasNumber] = useState(false);
+  const [hasSpecialChar, setHasSpecialChar] = useState(false);
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewPassword(value);
+    setHasUppercase(/[A-Z]/.test(value));
+    setHasLowercase(/[a-z]/.test(value));
+    setHasNumber(/[0-9]/.test(value));
+    setHasSpecialChar(/[!@#$%^&*(),.?":{}|<>]/.test(value));
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError('');
     
@@ -35,8 +50,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
       return;
     }
     
-    if (newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters long');
+    if (newPassword.length < 8 || !hasUppercase || !hasLowercase || !hasNumber || !hasSpecialChar) {
+      setPasswordError('Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.');
       return;
     }
     
@@ -51,7 +66,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
     setConfirmPassword('');
   };
 
-  const handleProfileUpdate = async (e: React.FormEvent) => {
+  const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     Swal.fire({
@@ -85,27 +100,17 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
           </button>
 
           <div className={`transition-all duration-500 ease-in-out ${isProfileFormOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
-            <form onSubmit={handleProfileUpdate} className="p-6 space-y-4 border-t border-gray-100">
+            <form onSubmit={handleProfileSubmit} className="p-6 space-y-4 border-t border-gray-100">
               {/* Field Read-Only */}
-              <Input
-                label="Full Name"
-                value={user.fullName}
-                disabled
-                className="bg-gray-100 cursor-not-allowed"
-              />
-              <Input
-                label="Email Address"
-                value={user.email}
-                disabled
-                className="bg-gray-100 cursor-not-allowed"
-              />
+              <Input label="Full Name" value={user.fullName} disabled className="bg-gray-100 cursor-not-allowed" />
+              <Input label="Email Address" value={user.email} disabled className="bg-gray-100 cursor-not-allowed" />
               
               {/* Field Editable */}
               <Input
+                type="tel"
                 label="Phone Number"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="text-gray-900"
               />
               
               {/* Field Read-Only */}
@@ -154,21 +159,19 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
           </button>
 
           <div className={`transition-all duration-500 ease-in-out ${isPasswordFormOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
-            <form onSubmit={handlePasswordChange} className="p-6 space-y-4 border-t border-gray-100">
+            <form onSubmit={handlePasswordSubmit} className="p-6 space-y-4 border-t border-gray-100">
               <Input
                 type="password"
                 label="Current Password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="text-gray-900"
                 required
               />
               <Input
                 type="password"
                 label="New Password"
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="text-gray-900"
+                onChange={handlePasswordChange}
                 required
               />
               <Input
@@ -176,7 +179,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                 label="Confirm New Password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="text-gray-900"
                 required
               />
               {passwordError && (
@@ -184,6 +186,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                   <p className="text-sm text-red-600">{passwordError}</p>
                 </div>
               )}
+              <div className="mt-2 text-xs space-y-1">
+                <div className={`flex items-center ${newPassword.length >= 8 ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{newPassword.length >= 8 ? '✓' : '○'}</span><span>At least 8 characters</span></div>
+                <div className={`flex items-center ${hasUppercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasUppercase ? '✓' : '○'}</span><span>One uppercase letter</span></div>
+                <div className={`flex items-center ${hasLowercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasLowercase ? '✓' : '○'}</span><span>One lowercase letter</span></div>
+                <div className={`flex items-center ${hasNumber ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasNumber ? '✓' : '○'}</span><span>One number</span></div>
+                <div className={`flex items-center ${hasSpecialChar ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasSpecialChar ? '✓' : '○'}</span><span>One special character</span></div>
+              </div>
               <Button type="submit" className="w-full">
                 Change Password
               </Button>
