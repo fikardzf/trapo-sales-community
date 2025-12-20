@@ -4,7 +4,7 @@
 import React, { useState, ChangeEvent, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 import { useToggle } from '@/hooks/useToggle';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
