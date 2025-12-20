@@ -32,7 +32,6 @@ const generateId = (): string => {
  * @returns {User[]} Array dari objek User.
  */
 export const getUsers = (): User[] => {
-  // Gunakan try-catch untuk menangani error di server
   try {
     if (typeof window !== 'undefined') {
       const data = localStorage.getItem(STORAGE_KEY);
@@ -122,7 +121,7 @@ export const updateUserStatus = (email: string, newStatus: User['status']): void
 
 /**
  * Membuat user admin default jika belum ada dengan penanganan SSR yang lebih baik.
- * Fungsi ini bisa dipanggil sekali saat aplikasi dimulai untuk memastikan selalu ada akun admin.
+ * Fungsi ini dipanggil sekali saat aplikasi dimulai untuk memastikan selalu ada akun admin.
  */
 export const seedAdminUser = () => {
   try {

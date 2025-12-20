@@ -3,10 +3,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { User } from '@/types'; // Menggunakan types/index.ts
-import { findUser, saveUser } from '@/lib/dummyDb'; // Menggunakan fungsi yang sudah ada
+import { User } from '@/types/user';
+import { findUser, saveUser, seedAdminUser } from '@/lib/dummyDb'; // Menggunakan fungsi yang sudah ada
 
-// Tipe data registrasi, diambil dari User interface
+// Mendefinisikan tipe data registrasi, diambil dari User interface
 type RegisterData = Omit<User, 'id' | 'role' | 'status' | 'createdAt'>;
 
 interface AuthContextType {
@@ -23,6 +23,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Pastikan admin user selalu ada saat provider dimuat
+  useEffect(() => {
+    seedAdminUser();
+  }, []);
 
   // Fungsi login yang memanggil findUser dari dummyDb
   const login = async (emailOrPhone: string, password: string): Promise<boolean> => {
