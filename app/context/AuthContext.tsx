@@ -2,13 +2,17 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '@/types/user';
 import { useRouter } from 'next/navigation';
+import { User } from '@/types/user';
+import { findUser, saveUser } from '@/lib/dummyDb'; // Menggunakan fungsi yang sudah ada
+
+// Mendefinisikan tipe untuk data registrasi, diambil dari User interface
+type RegisterData = Omit<User, 'id' | 'role' | 'status' | 'createdAt'>;
 
 interface AuthContextType {
   user: User | null;
   login: (emailOrPhone: string, password: string) => Promise<boolean>;
-  register: (userData: any) => Promise<boolean>;
+  register: (userData: RegisterData) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
 }
@@ -17,44 +21,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
-  const [user, setUser] = useLocalStorage<User | null>('loggedInUser', null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Fungsi login yang memanggil findUser dari dummyDb
   const login = async (emailOrPhone: string, password: string): Promise<boolean> => {
     setLoading(true);
-    
     try {
-      // Simulasi API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Untuk testing, gunakan data dummy
-      if (emailOrPhone === 'admin@trapo.com' && password === 'Admin123') {
-        const adminUser: User = {
-          id: 'admin-1',
-          fullName: 'Default Admin',
-          email: 'admin@trapo.com',
-          countryCode: '+62',
-          phoneNumber: '8112233445',
-          role: 'admin',
-          status: 'approved',
-          createdAt: new Date(),
-        };
-        setUser(adminUser);
-        return true;
-      }
-      
-      // Cari user di localStorage
-      const users = JSON.parse(localStorage.getItem('trapo_dummy_users') || '[]');
-      const foundUser = users.find((u: any) => 
-        (u.email === emailOrPhone || `${u.countryCode}${u.phoneNumber}` === emailOrPhone) && 
-        u.password === password
-      );
-      
+      const foundUser = findUser(emailOrPhone, password);
       if (foundUser) {
+        // Menyimpan ke localStorage tetapi juga ke state React
+        localStorage.setItem('loggedInUser', JSON.stringify(foundUser));
         setUser(foundUser);
         return true;
       }
-      
       return false;
     } catch (error) {
       console.error('Login error:', error);
@@ -64,38 +44,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (userData: any): Promise<boolean> => {
+  // Fungsi register yang memanggil saveUser dari dummyDb
+  const register = async (userData: RegisterData): Promise<boolean> => {
     setLoading(true);
-    
     try {
-      // Simulasi API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simpan ke localStorage
-      const users = JSON.parse(localStorage.getItem('trapo_dummy_users') || '[]');
-      const existingUser = users.find((u: any) => 
-        u.email === userData.email || 
-        `${u.countryCode}${u.phoneNumber}` === `${userData.countryCode}${userData.phoneNumber}`
-      );
-      
-      if (existingUser) {
-        throw new Error("Email or Phone Number already registered.");
+      const newUser = saveUser(userData);
+      if (newUser) {
+        return true;
       }
-      
-      const newUser = {
-        ...userData,
-        id: Date.now().toString(),
-        role: 'user',
-        status: 'pending',
-        createdAt: new Date(),
-      };
-      
-      users.push(newUser);
-      localStorage.setItem('trapo_dummy_users', JSON.stringify(users));
-      
-      return true;
-    } catch (error) {
+      return false;
+    } catch (error: any) {
       console.error('Registration error:', error);
+      // Melempar error agar bisa ditangani di komponen UI
       throw error;
     } finally {
       setLoading(false);
@@ -103,9 +63,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    localStorage.removeItem('loggedInUser');
     setUser(null);
     router.push('/');
   };
+
+  // Mengecek status login saat komponen dimuat
+  useEffect(() => {
+    const loggedInUserData = localStorage.getItem('loggedInUser');
+    if (loggedInUserData) {
+      try {
+        const parsedUser = JSON.parse(loggedInUserData);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing user data from localStorage:', error);
+        localStorage.removeItem('loggedInUser');
+      }
+    }
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, login, register, logout, loading }}>
