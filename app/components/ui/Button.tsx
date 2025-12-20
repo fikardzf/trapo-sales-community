@@ -19,27 +19,22 @@ const Button = ({
   disabled,
   ...props
 }: ButtonProps) => {
-  // Kelas dasar untuk semua tombol
   const baseClasses = 'font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
   
-  // Variasi warna untuk setiap jenis tombol
   const variantClasses = {
     primary: 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500',
     secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500',
     danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
   };
   
-  // Variasi ukuran tombol
   const sizeClasses = {
     sm: 'px-3 py-1.5 text-sm',
     md: 'px-4 py-2 text-base',
     lg: 'px-6 py-3 text-lg',
   };
   
-  // Kelas untuk lebar penuh
   const widthClass = fullWidth ? 'w-full' : '';
   
-  // Menggabungkan semua kelas
   const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${className}`;
   
   return (

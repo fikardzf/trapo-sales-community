@@ -3,7 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 const DashboardPage = () => {
@@ -12,7 +12,6 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Jika setelah loading selesai dan user masih kosong, redirect ke login
     if (!loading && !user) {
       router.replace('/');
     }

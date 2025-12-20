@@ -14,7 +14,6 @@ const Input = ({
   className = '',
   ...props
 }: InputProps) => {
-  // Kelas dasar untuk semua input
   const inputClasses = `
     w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 
     border border-gray-200 rounded-md 

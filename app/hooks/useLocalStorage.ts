@@ -1,16 +1,21 @@
 // hooks/useLocalStorage.ts
 import { useState, useEffect } from 'react';
 
+/**
+ * Hook untuk mengelola state dengan localStorage.
+ * @param key - Kunci untuk menyimpan di localStorage.
+ * @param initialValue - Nilai awal jika tidak ada di localStorage.
+ * @returns - Array berisi [value, setValue, removeValue].
+ */
 export const useLocalStorage = <T>(
-  key: string, 
+  key: string,
   initialValue: T
-) => {
-  // State to store our value
+): [T, (value: T) => void, () => void] => {
+  // State untuk menyimpan nilai
   const [storedValue, setStoredValue] = useState<T>(() => {
     if (typeof window === 'undefined') {
       return initialValue;
     }
-    
     try {
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
@@ -20,19 +25,29 @@ export const useLocalStorage = <T>(
     }
   });
 
-  // Return a wrapped version of useState's setter function that ...
-  const setValue = (value: T | ((val: T) => T)) => {
+  // Fungsi untuk mengubah nilai
+  const setValue = (value: T) => {
     try {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      setStoredValue(valueToStore);
-      
+      setStoredValue(value);
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+        window.localStorage.setItem(key, JSON.stringify(value));
       }
     } catch (error) {
       console.error(`Error setting localStorage key "${key}":`, error);
     }
   };
 
-  return [storedValue, setValue] as const;
+  // Fungsi untuk menghapus nilai
+  const removeValue = () => {
+    try {
+      setStoredValue(initialValue);
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(key);
+      }
+    } catch (error) {
+      console.error(`Error removing localStorage key "${key}":`, error);
+    }
+  };
+
+  return [storedValue, setValue, removeValue] as const;
 };

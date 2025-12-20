@@ -1,4 +1,4 @@
-// components/dashboard/SettingsView.tsx
+// app/dashboard/components/SettingsView.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -13,20 +13,15 @@ interface SettingsViewProps {
 }
 
 const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
-  // State untuk form password (menggunakan aturan baru)
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  
-  // State untuk form profil
   const [phoneNumber, setPhoneNumber] = useState(user.phoneNumber);
 
-  // State untuk kontrol visibilitas form
   const [isProfileFormOpen, toggleProfileForm] = useToggle(false);
   const [isPasswordFormOpen, togglePasswordForm] = useToggle(false);
 
-  // Fungsi validasi password yang sama dengan di halaman login
   const [hasUppercase, setHasUppercase] = useState(false);
   const [hasLowercase, setHasLowercase] = useState(false);
   const [hasNumber, setHasNumber] = useState(false);
@@ -81,9 +76,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Settings</h1>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* --- UPDATE PERSONAL INFORMATION --- */}
+        {/* UPDATE PERSONAL INFORMATION */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <button 
+          <button
             onClick={toggleProfileForm}
             className="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
           >
@@ -101,37 +96,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
 
           <div className={`transition-all duration-500 ease-in-out ${isProfileFormOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
             <form onSubmit={handleProfileSubmit} className="p-6 space-y-4 border-t border-gray-100">
-              {/* Field Read-Only */}
               <Input label="Full Name" value={user.fullName} disabled className="bg-gray-100 cursor-not-allowed" />
               <Input label="Email Address" value={user.email} disabled className="bg-gray-100 cursor-not-allowed" />
-              
-              {/* Field Editable */}
-              <Input
-                type="tel"
-                label="Phone Number"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-              />
-              
-              {/* Field Read-Only */}
-              <Input
-                label="Instagram"
-                value={user.instagram ? `@${user.instagram}` : 'Not connected'}
-                disabled
-                className="bg-gray-100 cursor-not-allowed"
-              />
-              <Input
-                label="TikTok"
-                value={user.tiktok ? `@${user.tiktok}` : 'Not connected'}
-                disabled
-                className="bg-gray-100 cursor-not-allowed"
-              />
-              <Input
-                label="Facebook"
-                value={user.facebook ? `@${user.facebook}` : 'Not connected'}
-                disabled
-                className="bg-gray-100 cursor-not-allowed"
-              />
+              <Input label="Phone Number" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
+              <Input label="Instagram" value={user.instagram ? `@${user.instagram}` : 'Not connected'} disabled className="bg-gray-100 cursor-not-allowed" />
+              <Input label="TikTok" value={user.tiktok ? `@${user.tiktok}` : 'Not connected'} disabled className="bg-gray-100 cursor-not-allowed" />
+              <Input label="Facebook" value={user.facebook ? `@${user.facebook}` : 'Not connected'} disabled className="bg-gray-100 cursor-not-allowed" />
               
               <Button type="submit" className="w-full">
                 Update Phone Number
@@ -140,9 +110,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
           </div>
         </div>
         
-        {/* --- CHANGE PASSWORD --- */}
+        {/* CHANGE PASSWORD */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <button 
+          <button
             onClick={togglePasswordForm}
             className="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
           >
@@ -165,21 +135,18 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
                 label="Current Password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                required
               />
               <Input
                 type="password"
                 label="New Password"
                 value={newPassword}
                 onChange={handlePasswordChange}
-                required
               />
               <Input
                 type="password"
                 label="Confirm New Password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                required
               />
               {passwordError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-md">

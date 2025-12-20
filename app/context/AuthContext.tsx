@@ -3,10 +3,11 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { User } from '@/types/user';
-import { findUser, saveUser, seedAdminUser } from '@/lib/dummyDb'; // Menggunakan fungsi yang sudah ada
+import { User } from '@/types';
+import { findUser, saveUser, seedAdminUser } from '@/lib/dummyDb';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
-// Mendefinisikan tipe data registrasi, diambil dari User interface
+// Tipe untuk data registrasi
 type RegisterData = Omit<User, 'id' | 'role' | 'status' | 'createdAt'>;
 
 interface AuthContextType {
@@ -21,22 +22,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  // Menggunakan useLocalStorage untuk state user
+  const [user, setUser] = useLocalStorage<User | null>('loggedInUser', null);
   const [loading, setLoading] = useState(false);
 
-  // Pastikan admin user selalu ada saat provider dimuat
+  // Pastikan admin user ada saat provider dimuat
   useEffect(() => {
     seedAdminUser();
   }, []);
 
-  // Fungsi login yang memanggil findUser dari dummyDb
   const login = async (emailOrPhone: string, password: string): Promise<boolean> => {
     setLoading(true);
     try {
       const foundUser = findUser(emailOrPhone, password);
       if (foundUser) {
-        // Menyimpan ke localStorage dan state React
-        localStorage.setItem('loggedInUser', JSON.stringify(foundUser));
         setUser(foundUser);
         return true;
       }
@@ -49,7 +48,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Fungsi register yang memanggil saveUser dari dummyDb
   const register = async (userData: RegisterData): Promise<boolean> => {
     setLoading(true);
     try {
@@ -60,7 +58,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     } catch (error: any) {
       console.error('Registration error:', error);
-      // Melempar error agar bisa ditangani di UI
       throw error;
     } finally {
       setLoading(false);
@@ -68,24 +65,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem('loggedInUser');
     setUser(null);
     router.push('/');
   };
-
-  // Mengecek status login saat komponen dimuat
-  useEffect(() => {
-    const loggedInUserData = localStorage.getItem('loggedInUser');
-    if (loggedInUserData) {
-      try {
-        const parsedUser = JSON.parse(loggedInUserData);
-        setUser(parsedUser);
-      } catch (error) {
-        console.error('Error parsing user data from localStorage:', error);
-        localStorage.removeItem('loggedInUser');
-      }
-    }
-  }, []);
 
   return (
     <AuthContext.Provider value={{ user, login, register, logout, loading }}>

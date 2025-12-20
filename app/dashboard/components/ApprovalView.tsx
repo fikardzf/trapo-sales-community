@@ -1,8 +1,9 @@
-// components/dashboard/ApprovalView.tsx
+// app/dashboard/components/ApprovalView.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User } from '@/types/user';
+import { User } from '@/types';
+import { getUsers, updateUserStatus } from '@/lib/dummyDb';
 import Button from '@/components/ui/Button';
 import Swal from 'sweetalert2';
 
@@ -15,10 +16,9 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ user }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch all users with pending status
     const fetchPendingUsers = () => {
       try {
-        const allUsers = JSON.parse(localStorage.getItem('trapo_dummy_users') || '[]');
+        const allUsers = getUsers();
         const pending = allUsers.filter((u: User) => u.status === 'pending');
         setPendingUsers(pending);
       } catch (error) {
@@ -49,14 +49,8 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ user }) => {
 
     if (result.isConfirmed) {
       try {
-        // Update user status in localStorage
-        const allUsers = JSON.parse(localStorage.getItem('trapo_dummy_users') || '[]');
-        const updatedUsers = allUsers.map((u: User) => 
-          u.email === email ? { ...u, status: 'approved' as const } : u
-        );
-        localStorage.setItem('trapo_dummy_users', JSON.stringify(updatedUsers));
+        updateUserStatus(email, 'approved');
         
-        // Update local state
         setPendingUsers(pendingUsers.filter(u => u.email !== email));
         
         await Swal.fire(
@@ -88,14 +82,8 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ user }) => {
 
     if (result.isConfirmed) {
       try {
-        // Update user status in localStorage
-        const allUsers = JSON.parse(localStorage.getItem('trapo_dummy_users') || '[]');
-        const updatedUsers = allUsers.map((u: User) => 
-          u.email === email ? { ...u, status: 'rejected' as const } : u
-        );
-        localStorage.setItem('trapo_dummy_users', JSON.stringify(updatedUsers));
+        updateUserStatus(email, 'rejected');
         
-        // Update local state
         setPendingUsers(pendingUsers.filter(u => u.email !== email));
         
         await Swal.fire(

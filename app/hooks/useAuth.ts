@@ -1,8 +1,11 @@
 // hooks/useAuth.ts
 import { useContext } from 'react';
 import { AuthContext } from '@/context/AuthContext';
-import { User } from '@/types/user';
 
+/**
+ * Hook untuk mengakses konteks autentikasi.
+ * @returns - Objek berisi user, login, register, logout, loading.
+ */
 export const useAuth = () => {
   const context = useContext(AuthContext);
   
