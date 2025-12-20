@@ -51,44 +51,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user }) => {
     }
   };
 
-  const renderActiveView = () => {
-    try {
-      switch (activeView) {
-        case 'dashboard': return <MainDashboardView user={user} />;
-        case 'profile': return <ProfileView user={user} />;
-        case 'settings': return <SettingsView user={user} />;
-        case 'approval':
-          if (user.role === 'admin') {
-            return <ApprovalView user={user} />;
-          }
-          return (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center p-8 bg-white rounded-lg shadow-md max-w-md">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
-                <p className="text-gray-600">You don't have permission to access this page.</p>
-              </div>
-            </div>
-          );
-        default: return <MainDashboardView user={user} />;
-      }
-    } catch (error) {
-      console.error('Error rendering view:', error);
-      return (
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center p-8 bg-white rounded-lg shadow-md max-w-md">
-                <h2 className="text-2xl font-bold text-red-800 mb-2">Error Loading View</h2>
-                <p className="text-gray-600">Please try again or contact support.</p>
-          </div>
-        </div>
-      );
-    }
-  };
-
-  // ... (Sisanya kode untuk sidebar dan render)
+  // ... (Sisanya kode yang ada di file ini, tidak perlu diubah)
   
   return (
     <div className="flex w-screen h-screen bg-gray-100">
-      {/* ... */}
+      {/* ... (Sisanya kode yang ada di file ini, tidak perlu diubah) */}
     </div>
   );
 };

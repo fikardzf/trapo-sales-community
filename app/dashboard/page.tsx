@@ -4,7 +4,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import DashboardLayout from '../components/dashboard/DashboardLayout';
+import { user } from '@/types/user';
 
 const DashboardPage = () => {
   const router = useRouter();
