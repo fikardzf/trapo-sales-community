@@ -1,10 +1,7 @@
-// app/dashboard/components/ApprovalView.tsx
-'use client';
+// app/dashboard/components/approvalView.tsx
 
 import React, { useState, useEffect } from 'react';
-import { User } from '@/types';
-import { getUsers, updateUserStatus } from '@/lib/dummyDb';
-import Button from '@/components/ui/Button';
+import { User, getUsers, updateUserStatus } from '@/lib/dummyDb';
 import Swal from 'sweetalert2';
 
 interface ApprovalViewProps {
@@ -16,10 +13,11 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ user }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Fetch all users with pending status
     const fetchPendingUsers = () => {
       try {
         const allUsers = getUsers();
-        const pending = allUsers.filter((u: User) => u.status === 'pending');
+        const pending = allUsers.filter(u => u.status === 'pending');
         setPendingUsers(pending);
       } catch (error) {
         console.error('Error fetching pending users:', error);
@@ -51,6 +49,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ user }) => {
       try {
         updateUserStatus(email, 'approved');
         
+        // Update the local state
         setPendingUsers(pendingUsers.filter(u => u.email !== email));
         
         await Swal.fire(
@@ -84,6 +83,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ user }) => {
       try {
         updateUserStatus(email, 'rejected');
         
+        // Update the local state
         setPendingUsers(pendingUsers.filter(u => u.email !== email));
         
         await Swal.fire(
@@ -105,10 +105,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ user }) => {
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
-          <p className="text-gray-900">Loading pending users...</p>
-        </div>
+        <p className="text-gray-900">Loading pending users...</p>
       </div>
     );
   }
@@ -177,21 +174,18 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ user }) => {
                       {new Date(pendingUser.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Button
+                      <button
                         onClick={() => handleApprove(pendingUser.email)}
-                        variant="primary"
-                        size="sm"
-                        className="mr-2"
+                        className="text-indigo-600 hover:text-indigo-900 mr-4"
                       >
                         Approve
-                      </Button>
-                      <Button
+                      </button>
+                      <button
                         onClick={() => handleReject(pendingUser.email)}
-                        variant="danger"
-                        size="sm"
+                        className="text-red-600 hover:text-red-900"
                       >
                         Reject
-                      </Button>
+                      </button>
                     </td>
                   </tr>
                 ))}

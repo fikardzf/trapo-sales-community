@@ -1,33 +1,32 @@
-// app/dashboard/page.tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { user } from '@/types/user';
+import { User } from '@/lib/dummyDb';
+import DashboardLayout from './components/dashboardLayout';
 
 const DashboardPage = () => {
   const router = useRouter();
-  const { user } = useAuth();
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/');
+    const loggedInUserData = localStorage.getItem('loggedInUser');
+    if (loggedInUserData) {
+      const parsedUser = JSON.parse(loggedInUserData);
+      setUser(parsedUser);
+    } else {
+      router.push('/');
     }
-  }, [loading, user, router]);
+    setLoading(false);
+  }, [router]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
-      </div>
-    );
+    return <div className="flex items-center justify-center min-h-screen bg-gray-100"><p>Loading...</p></div>;
   }
 
   if (!user) {
-    return null; // Akan di-redirect oleh useEffect
+    return null;
   }
 
   return <DashboardLayout user={user} />;
