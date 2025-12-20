@@ -1,7 +1,6 @@
-// app/dashboard/components/mainDashboardView.tsx
-
+// components/dashboard/MainDashboardView.tsx
 import React from 'react';
-import { User } from '@/lib/dummyDb';
+import { User } from '@/types/user';
 
 interface MainDashboardViewProps {
   user: User;

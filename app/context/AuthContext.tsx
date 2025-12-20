@@ -3,13 +3,12 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@/types/user';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
   login: (emailOrPhone: string, password: string) => Promise<boolean>;
-  register: (data: RegisterData) => Promise<boolean>;
+  register: (userData: any) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
 }
@@ -17,24 +16,45 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const router = useRouter();
   const [user, setUser] = useLocalStorage<User | null>('loggedInUser', null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const login = async (emailOrPhone: string, password: string): Promise<boolean> => {
     setLoading(true);
+    
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emailOrPhone, password }),
-      });
+      // Simulasi API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (response.ok) {
-        const { user } = await response.json();
-        setUser(user);
+      // Untuk testing, gunakan data dummy
+      if (emailOrPhone === 'admin@trapo.com' && password === 'Admin123') {
+        const adminUser: User = {
+          id: 'admin-1',
+          fullName: 'Default Admin',
+          email: 'admin@trapo.com',
+          countryCode: '+62',
+          phoneNumber: '8112233445',
+          role: 'admin',
+          status: 'approved',
+          createdAt: new Date(),
+        };
+        setUser(adminUser);
         return true;
       }
+      
+      // Cari user di localStorage
+      const users = JSON.parse(localStorage.getItem('trapo_dummy_users') || '[]');
+      const foundUser = users.find((u: any) => 
+        (u.email === emailOrPhone || `${u.countryCode}${u.phoneNumber}` === emailOrPhone) && 
+        u.password === password
+      );
+      
+      if (foundUser) {
+        setUser(foundUser);
+        return true;
+      }
+      
       return false;
     } catch (error) {
       console.error('Login error:', error);
@@ -44,19 +64,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (data: RegisterData): Promise<boolean> => {
+  const register = async (userData: any): Promise<boolean> => {
     setLoading(true);
+    
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+      // Simulasi API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      return response.ok;
+      // Simpan ke localStorage
+      const users = JSON.parse(localStorage.getItem('trapo_dummy_users') || '[]');
+      const existingUser = users.find((u: any) => 
+        u.email === userData.email || 
+        `${u.countryCode}${u.phoneNumber}` === `${userData.countryCode}${userData.phoneNumber}`
+      );
+      
+      if (existingUser) {
+        throw new Error("Email or Phone Number already registered.");
+      }
+      
+      const newUser = {
+        ...userData,
+        id: Date.now().toString(),
+        role: 'user',
+        status: 'pending',
+        createdAt: new Date(),
+      };
+      
+      users.push(newUser);
+      localStorage.setItem('trapo_dummy_users', JSON.stringify(users));
+      
+      return true;
     } catch (error) {
       console.error('Registration error:', error);
-      return false;
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -66,13 +106,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     router.push('/');
   };
-
-  useEffect(() => {
-    // Check if user is still valid on mount
-    if (user) {
-      // Optionally validate token with server
-    }
-  }, []);
 
   return (
     <AuthContext.Provider value={{ user, login, register, logout, loading }}>

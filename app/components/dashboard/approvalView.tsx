@@ -1,7 +1,9 @@
-// app/dashboard/components/approvalView.tsx
+// components/dashboard/ApprovalView.tsx
+'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, getUsers, updateUserStatus } from '@/lib/dummyDb';
+import { User } from '@/types/user';
+import Button from '@/components/ui/Button';
 import Swal from 'sweetalert2';
 
 interface ApprovalViewProps {
@@ -16,8 +18,8 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ user }) => {
     // Fetch all users with pending status
     const fetchPendingUsers = () => {
       try {
-        const allUsers = getUsers();
-        const pending = allUsers.filter(u => u.status === 'pending');
+        const allUsers = JSON.parse(localStorage.getItem('trapo_dummy_users') || '[]');
+        const pending = allUsers.filter((u: User) => u.status === 'pending');
         setPendingUsers(pending);
       } catch (error) {
         console.error('Error fetching pending users:', error);
@@ -47,9 +49,14 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ user }) => {
 
     if (result.isConfirmed) {
       try {
-        updateUserStatus(email, 'approved');
+        // Update user status in localStorage
+        const allUsers = JSON.parse(localStorage.getItem('trapo_dummy_users') || '[]');
+        const updatedUsers = allUsers.map((u: User) => 
+          u.email === email ? { ...u, status: 'approved' as const } : u
+        );
+        localStorage.setItem('trapo_dummy_users', JSON.stringify(updatedUsers));
         
-        // Update the local state
+        // Update local state
         setPendingUsers(pendingUsers.filter(u => u.email !== email));
         
         await Swal.fire(
@@ -81,9 +88,14 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ user }) => {
 
     if (result.isConfirmed) {
       try {
-        updateUserStatus(email, 'rejected');
+        // Update user status in localStorage
+        const allUsers = JSON.parse(localStorage.getItem('trapo_dummy_users') || '[]');
+        const updatedUsers = allUsers.map((u: User) => 
+          u.email === email ? { ...u, status: 'rejected' as const } : u
+        );
+        localStorage.setItem('trapo_dummy_users', JSON.stringify(updatedUsers));
         
-        // Update the local state
+        // Update local state
         setPendingUsers(pendingUsers.filter(u => u.email !== email));
         
         await Swal.fire(
@@ -105,7 +117,10 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ user }) => {
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center h-full">
-        <p className="text-gray-900">Loading pending users...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <p className="text-gray-900">Loading pending users...</p>
+        </div>
       </div>
     );
   }
@@ -174,18 +189,21 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ user }) => {
                       {new Date(pendingUser.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
+                      <Button
                         onClick={() => handleApprove(pendingUser.email)}
-                        className="text-indigo-600 hover:text-indigo-900 mr-4"
+                        variant="primary"
+                        size="sm"
+                        className="mr-2"
                       >
                         Approve
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => handleReject(pendingUser.email)}
-                        className="text-red-600 hover:text-red-900"
+                        variant="danger"
+                        size="sm"
                       >
                         Reject
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}

@@ -1,7 +1,11 @@
 // hooks/useLocalStorage.ts
 import { useState, useEffect } from 'react';
 
-export const useLocalStorage = <T>(key: string, initialValue: T) => {
+export const useLocalStorage = <T>(
+  key: string, 
+  initialValue: T
+) => {
+  // State to store our value
   const [storedValue, setStoredValue] = useState<T>(() => {
     if (typeof window === 'undefined') {
       return initialValue;
@@ -16,6 +20,7 @@ export const useLocalStorage = <T>(key: string, initialValue: T) => {
     }
   });
 
+  // Return a wrapped version of useState's setter function that ...
   const setValue = (value: T | ((val: T) => T)) => {
     try {
       const valueToStore = value instanceof Function ? value(storedValue) : value;
