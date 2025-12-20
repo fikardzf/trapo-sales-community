@@ -1,9 +1,14 @@
+// app/page.tsx
+
 'use client';
 
 import React, { useState, useMemo, useRef, ChangeEvent, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { saveUser, findUser, User } from '@/lib/dummyDb';
+// --- SWEETALERT ---
+// Import library SweetAlert2
+import Swal from 'sweetalert2';
 
 const Page = () => {
   const router = useRouter();
@@ -136,9 +141,18 @@ const Page = () => {
     return isValid;
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  // --- SWEETALERT ---
+  // Tambahkan 'async' di sini karena kita akan menggunakan 'await' di dalamnya
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
+      // --- SWEETALERT ---
+      // Tampilkan notifikasi error jika validasi gagal
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Validation Failed',
+        text: 'Please fill in all required fields correctly.',
+      });
       return;
     }
 
@@ -147,20 +161,57 @@ const Page = () => {
       const user = findUser(loginIdentifier, password);
 
       if (user) {
+        // --- SWEETALERT ---
+        // Cek status user
+        if (user.status === 'pending') {
+          await Swal.fire({
+            icon: 'info',
+            title: 'Account Pending Approval',
+            text: 'Your account is still being reviewed. Please wait for admin approval.',
+          });
+          return;
+        }
+        if (user.status === 'rejected') {
+          await Swal.fire({
+            icon: 'error',
+            title: 'Registration Rejected',
+            text: 'Your registration has been rejected. Please contact support for more information.',
+          });
+          return;
+        }
+
         localStorage.setItem('loggedInUser', JSON.stringify(user));
-        alert('Login Successful!');
-        router.push('/dashboard');
+        // --- SWEETALERT ---
+        // Tampilkan notifikasi sukses
+        await Swal.fire({
+          icon: 'success',
+          title: 'Login Successful!',
+          text: `Welcome back, ${user.fullName}!`,
+          timer: 2000, // Auto close after 2 seconds
+          showConfirmButton: false,
+        });
+        router.replace('/dashboard');
       } else {
-        alert('Login Failed! Incorrect credentials or user not found.');
-        const goToRegister = window.confirm('User not found. Do you want to create a new account?');
-        if (goToRegister) {
+        // --- SWEETALERT ---
+        // Ganti confirm() dengan SweetAlert2
+        const result = await Swal.fire({
+          title: 'User Not Found',
+          text: "Incorrect credentials or user not found. Do you want to create a new account?",
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#d33',
+          confirmButtonText: 'Yes, Register!',
+          cancelButtonText: 'No, Try Again',
+        });
+
+        if (result.isConfirmed) {
           setActiveForm('register');
         }
       }
     }
 
     if (activeForm === 'register') {
-      // --- PERBAIKAN 1: Hapus tipe 'User' agar sesuai dengan fungsi saveUser ---
       const newUser = {
         fullName,
         email,
@@ -175,20 +226,40 @@ const Page = () => {
 
       try {
         saveUser(newUser);
-        alert('Registration Successful! Please login.');
+        // --- SWEETALERT ---
+        await Swal.fire({
+          icon: 'success',
+          title: 'Registration Successful!',
+          text: 'Your account has been created and is pending approval. Please login after it\'s approved.',
+        });
         setActiveForm('login');
+        // Reset form fields
         setFullName('');
         setEmail('');
         setPhoneNumber('');
         setPassword('');
+        setIdCardImage(null);
+        setInstagram('');
+        setTiktok('');
+        setFacebook('');
       } catch (error: any) {
-        alert(`Registration Failed: ${error.message}`);
+        // --- SWEETALERT ---
+        await Swal.fire({
+          icon: 'error',
+          title: 'Registration Failed',
+          text: error.message,
+        });
       }
     }
 
     if (activeForm === 'forgotPassword') {
       const forgotIdentifier = email || `${countryCode}${phoneNumber}`;
-      alert(`If an account exists for ${forgotIdentifier}, a password reset link has been "sent".`);
+      // --- SWEETALERT ---
+      await Swal.fire({
+        icon: 'info',
+        title: 'Password Reset',
+        text: `If an account exists for ${forgotIdentifier}, a password reset link has been "sent".`,
+      });
       setActiveForm('login');
     }
   };
@@ -245,7 +316,6 @@ const Page = () => {
                         {loginMethod === 'email' ? (
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                            {/* --- PERBAIKAN 2: Mengurangi padding di mobile --- */}
                             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                             {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
                           </div>
@@ -288,7 +358,6 @@ const Page = () => {
                 <div className="w-full md:max-w-sm">
                   <h2 className="text-lg sm:text-xl md:text-3xl font-semibold mb-6 text-gray-800">Create a New Account</h2>
                   <form className="space-y-4" onSubmit={handleSubmit}>
-                    {/* --- PERBAIKAN 2: Mengurangi padding di mobile --- */}
                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label><input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />{fullNameError && <p className="text-red-500 text-xs mt-1">{fullNameError}</p>}</div>
                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />{emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}</div>
                     <div>
@@ -313,7 +382,6 @@ const Page = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">ID Card Image *</label>
                       <div className="flex items-center space-x-3">
-                        {/* --- PERBAIKAN 2: Mengurangi padding di mobile --- */}
                         <button type="button" onClick={() => fileInputRef.current?.click()} className="px-3 py-2 sm:py-2 md:py-3 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">Choose File</button>
                         <span className="text-sm text-gray-600">{idCardImage ? 'Image selected' : 'No file chosen'}</span>
                       </div>
@@ -323,7 +391,6 @@ const Page = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Instagram (Optional)</label>
                       <div className="flex">
-                        {/* --- PERBAIKAN 2: Mengurangi padding di mobile --- */}
                         <span className="inline-flex items-center px-2 sm:px-2 md:px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
                         <input type="text" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="username" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                       </div>
@@ -353,7 +420,6 @@ const Page = () => {
                 <div className="w-full md:max-w-sm">
                   <h2 className="text-lg sm:text-xl md:text-3xl font-semibold mb-6 text-gray-800">Reset Your Password</h2>
                   <form className="space-y-4" onSubmit={handleSubmit}>
-                    {/* --- PERBAIKAN 2: Mengurangi padding di mobile --- */}
                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />{emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}</div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
