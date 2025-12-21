@@ -37,6 +37,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({ user }) => {
       setPasswordError('Password must be at least 8 characters long');
       return;
     }
+
+    if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+      setPasswordError('Password must contain uppercase, lowercase, number, and special character');
+      return;
+    }
     
     Swal.fire({
       icon: 'success',

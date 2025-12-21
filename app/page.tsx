@@ -1,17 +1,19 @@
 // app/page.tsx
 
+/* app/page.tsx */
+
 'use client';
 
 import React, { useState, useMemo, useRef, ChangeEvent, useEffect } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { saveUser, findUser, User } from '@/lib/dummyDb';
+import { saveUser, findUser, seedAdminUser } from '@/lib/dummyDb';
+import { useNavigation } from '@/lib/useNavigation';
 // --- SWEETALERT ---
 // Import library SweetAlert2
 import Swal from 'sweetalert2';
 
 const Page = () => {
-  const router = useRouter();
+  const nav = useNavigation();
   const [activeForm, setActiveForm] = useState<'login' | 'register' | 'forgotPassword'>('login');
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   
@@ -32,11 +34,15 @@ const Page = () => {
   const [hasUppercase, setHasUppercase] = useState(false);
   const [hasLowercase, setHasLowercase] = useState(false);
   const [hasNumber, setHasNumber] = useState(false);
+  const [hasSpecialChar, setHasSpecialChar] = useState(false);
   
   // Form validation states
   const [fullNameError, setFullNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [phoneNumberError, setPhoneNumberError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [idCardError, setIdCardError] = useState('');
+  const [socialMediaError, setSocialMediaError] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -56,6 +62,10 @@ const Page = () => {
     setActiveForm(formType);
   };
 
+  useEffect(() => {
+    seedAdminUser();
+  }, []);
+
   const handleLoginMethodChange = (method: 'email' | 'phone') => {
     if (method === loginMethod) return;
     setIsFieldVisible(false);
@@ -71,6 +81,13 @@ const Page = () => {
     setHasUppercase(/[A-Z]/.test(value));
     setHasLowercase(/[a-z]/.test(value));
     setHasNumber(/[0-9]/.test(value));
+    setHasSpecialChar(/[^A-Za-z0-9]/.test(value));
+
+    if (activeForm !== 'forgotPassword') {
+      if (!value) setPasswordError('Password is required');
+      else if (value.length < 8) setPasswordError('Password must be at least 8 characters');
+      else setPasswordError('');
+    }
   };
   
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -87,6 +104,8 @@ const Page = () => {
   
   const validateForm = () => {
     let isValid = true;
+    const phoneTrimmed = phoneNumber.trim();
+    const hasAnySocial = Boolean(instagram.trim() || tiktok.trim() || facebook.trim());
     
     if (activeForm === 'register' && !fullName.trim()) {
       setFullNameError('Full Name is required');
@@ -108,15 +127,18 @@ const Page = () => {
         }
         setPhoneNumberError('');
       } else {
-        if (!phoneNumber.trim()) {
+        if (!phoneTrimmed) {
           setPhoneNumberError('Phone Number is required');
+          isValid = false;
+        } else if (phoneTrimmed.length < 8) {
+          setPhoneNumberError('Please enter a valid phone number');
           isValid = false;
         } else {
           setPhoneNumberError('');
         }
         setEmailError('');
       }
-    } else {
+    } else if (activeForm === 'register') {
       if (!email.trim()) {
         setEmailError('Email Address is required');
         isValid = false;
@@ -126,16 +148,82 @@ const Page = () => {
       } else {
         setEmailError('');
       }
-      if (!phoneNumber.trim()) {
+      if (!phoneTrimmed) {
         setPhoneNumberError('Phone Number is required');
+        isValid = false;
+      } else if (phoneTrimmed.length < 8) {
+        setPhoneNumberError('Please enter a valid phone number');
         isValid = false;
       } else {
         setPhoneNumberError('');
       }
+    } else {
+      // forgotPassword: allow email OR phone (at least one)
+      const hasEmail = Boolean(email.trim());
+      const hasPhone = Boolean(phoneTrimmed);
+
+      if (!hasEmail && !hasPhone) {
+        setEmailError('Email or Phone Number is required');
+        setPhoneNumberError('Email or Phone Number is required');
+        isValid = false;
+      } else {
+        if (hasEmail) {
+          if (!/^\S+@\S+\.\S+$/.test(email)) {
+            setEmailError('Please enter a valid email address');
+            isValid = false;
+          } else {
+            setEmailError('');
+          }
+        } else {
+          setEmailError('');
+        }
+
+        if (hasPhone) {
+          if (phoneTrimmed.length < 8) {
+            setPhoneNumberError('Please enter a valid phone number');
+            isValid = false;
+          } else {
+            setPhoneNumberError('');
+          }
+        } else {
+          setPhoneNumberError('');
+        }
+      }
     }
     
-    if (activeForm !== 'forgotPassword' && (!hasUppercase || !hasLowercase || !hasNumber)) {
-      isValid = false;
+    if (activeForm !== 'forgotPassword') {
+      if (!password) {
+        setPasswordError('Password is required');
+        isValid = false;
+      } else if (password.length < 8) {
+        setPasswordError('Password must be at least 8 characters');
+        isValid = false;
+      } else if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecialChar) {
+        setPasswordError('Password must contain uppercase, lowercase, number, and special character');
+        isValid = false;
+      } else {
+        setPasswordError('');
+      }
+    }
+
+    if (activeForm === 'register') {
+      if (!idCardImage) {
+        setIdCardError('ID Card Image is required');
+        isValid = false;
+      } else {
+        setIdCardError('');
+      }
+
+      // Minimal 1 social media untuk kebutuhan verifikasi
+      if (!hasAnySocial) {
+        setSocialMediaError('Please fill at least one social media');
+        isValid = false;
+      } else {
+        setSocialMediaError('');
+      }
+    } else {
+      setIdCardError('');
+      setSocialMediaError('');
     }
     
     return isValid;
@@ -190,14 +278,14 @@ const Page = () => {
           timer: 2000, // Auto close after 2 seconds
           showConfirmButton: false,
         });
-        router.replace('/dashboard');
+        nav.replace('/dashboard');
       } else {
         // --- SWEETALERT ---
-        // Ganti confirm() dengan SweetAlert2
+        // Tampilkan error + opsi register
         const result = await Swal.fire({
-          title: 'User Not Found',
-          text: "Incorrect credentials or user not found. Do you want to create a new account?",
-          icon: 'question',
+          title: 'Login Failed',
+          text: 'Incorrect credentials or user not found. Do you want to create a new account?',
+          icon: 'error',
           showCancelButton: true,
           confirmButtonColor: '#3085d6',
           cancelButtonColor: '#d33',
@@ -283,8 +371,8 @@ const Page = () => {
   }, [activeForm]);
 
   return (
-    <div className="flex w-screen h-screen bg-gray-50">
-      <div className="flex flex-1 flex-col md:flex-row overflow-hidden">
+    <div className="min-h-screen bg-gray-50 py-6 sm:py-8 md:py-10">
+      <div className="mx-auto flex w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm min-h-[calc(100vh-3rem)]">
         
         {/* Logo untuk mobile dipindahkan ke paling atas */}
         <div className="flex justify-center md:hidden p-4 bg-white shadow-sm">
@@ -337,10 +425,12 @@ const Page = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                       <input type="password" value={password} onChange={handlePasswordChange} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                      {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
                       <div className="mt-2 text-xs">
                         <div className={`flex items-center ${hasUppercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasUppercase ? '✓' : '○'}</span><span>Must contain uppercase letter</span></div>
                         <div className={`flex items-center ${hasLowercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasLowercase ? '✓' : '○'}</span><span>Must contain lowercase letter</span></div>
                         <div className={`flex items-center ${hasNumber ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasNumber ? '✓' : '○'}</span><span>Must contain a number</span></div>
+                        <div className={`flex items-center ${hasSpecialChar ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasSpecialChar ? '✓' : '○'}</span><span>Must contain a special character</span></div>
                       </div>
                     </div>
                     <div className="flex items-center"><input id="remember" type="checkbox" className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-300 rounded" /><label htmlFor="remember" className="ml-2 block text-sm text-gray-700">Remember me</label></div>
@@ -373,6 +463,7 @@ const Page = () => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
                       <input type="password" value={password} onChange={handlePasswordChange} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                      {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
                       <div className="mt-2 text-xs">
                         <div className={`flex items-center ${hasUppercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasUppercase ? '✓' : '○'}</span><span>Must contain uppercase letter</span></div>
                         <div className={`flex items-center ${hasLowercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasLowercase ? '✓' : '○'}</span><span>Must contain lowercase letter</span></div>
@@ -387,6 +478,7 @@ const Page = () => {
                       </div>
                       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                       {idCardImage && <div className="mt-3 relative w-32 h-32"><Image src={idCardImage} alt="ID Card Preview" fill className="object-cover rounded-md" /></div>}
+                      {idCardError && <p className="text-red-500 text-xs mt-1">{idCardError}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Instagram (Optional)</label>
@@ -408,6 +500,7 @@ const Page = () => {
                         <span className="inline-flex items-center px-2 sm:px-2 md:px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
                         <input type="text" value={facebook} onChange={(e) => setFacebook(e.target.value)} placeholder="username" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
                       </div>
+                      {socialMediaError && <p className="text-red-500 text-xs mt-1">{socialMediaError}</p>}
                     </div>
                     <button type="submit" className="w-full p-2 sm:p-2 md:p-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium">Register</button>
                     <div className="text-center text-sm"><button type="button" onClick={() => handleFormSwitch('login')} className="text-blue-500 hover:text-blue-600 transition-colors">Already have an account? Login</button></div>
@@ -422,7 +515,7 @@ const Page = () => {
                   <form className="space-y-4" onSubmit={handleSubmit}>
                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />{emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}</div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number (Optional)</label>
                       <div className="flex">
                         <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex-shrink-0 px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
                           {countryCodes.map((c) => (<option key={c.code} value={c.code}>{c.abbr} {c.code}</option>))}

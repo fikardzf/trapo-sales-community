@@ -1,12 +1,12 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useNavigation } from '@/lib/useNavigation';
 import { useEffect, useState } from 'react';
 import { User } from '@/lib/dummyDb';
 import DashboardLayout from './components/dashboardLayout';
 
 const DashboardPage = () => {
-  const router = useRouter();
+  const nav = useNavigation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -16,10 +16,10 @@ const DashboardPage = () => {
       const parsedUser = JSON.parse(loggedInUserData);
       setUser(parsedUser);
     } else {
-      router.push('/');
+      nav.replace('/');
     }
     setLoading(false);
-  }, [router]);
+  }, [nav]);
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen bg-gray-100"><p>Loading...</p></div>;

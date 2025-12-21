@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useNavigation } from '@/lib/useNavigation';
 import { User } from '@/lib/dummyDb';
 
 interface SidebarProfileViewProps {
@@ -9,11 +9,11 @@ interface SidebarProfileViewProps {
 }
 
 const SidebarProfileView = ({ user, onClose }: SidebarProfileViewProps) => {
-  const router = useRouter();
+  const nav = useNavigation();
 
   const handleLogout = () => {
     localStorage.removeItem('loggedInUser');
-    router.push('/');
+    nav.push('/');
   };
 
   return (

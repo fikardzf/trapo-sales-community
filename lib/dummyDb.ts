@@ -138,7 +138,7 @@ export const seedAdminUser = () => {
           email: adminEmail,
           countryCode: '+62',
           phoneNumber: '8112233445',
-          password: 'Admin123',
+          password: 'Admin123!',
           role: 'admin',
           status: 'approved',
           createdAt: new Date(),

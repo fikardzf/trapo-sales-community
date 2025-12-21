@@ -3,7 +3,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigation } from '@/lib/useNavigation';
 import Image from 'next/image';
 import { User } from '@/lib/dummyDb';
 import Swal from 'sweetalert2';
@@ -22,7 +22,7 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user }) => {
-  const router = useRouter();
+  const nav = useNavigation();
   const sidebarRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -56,10 +56,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ user }) => {
       try {
         localStorage.removeItem('loggedInUser');
         await Swal.fire('Logged Out!', 'You have been successfully logged out.', 'success');
-        router.replace('/');
+        nav.replace('/');
       } catch (error) {
         console.error('Error during logout:', error);
-        router.replace('/');
+        nav.replace('/');
       }
     }
   };
