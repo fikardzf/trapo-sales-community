@@ -91,7 +91,7 @@ export const findUser = (emailOrPhone: string, password: string): User | null =>
   try {
     if (typeof window !== 'undefined') {
       const users = getUsers();
-      return users.find(u => (u.email === emailOrPhone || `${u.countryCode}${u.phoneNumber}` === emailOrPhone) && u.password === password) || null;
+      return users.findUser(u => (u.email === emailOrPhone || `${u.countryCode}${u.phoneNumber}` === emailOrPhone) && u.password === password) || null;
     }
     return null;
   } catch (error) {
@@ -129,6 +129,7 @@ export const seedAdminUser = () => {
     if (typeof window !== 'undefined') {
       const users = getUsers();
       const adminEmail = 'admin@trapo.com';
+      const adminPassword = 'Admin123!';
       const existingAdmin = users.find(u => u.email === adminEmail);
 
       if (!existingAdmin) {
@@ -145,10 +146,13 @@ export const seedAdminUser = () => {
         };
         users.push(adminUser);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-        console.log('Admin user created! Email: admin@trapo.com, Password: Admin123');
+        console.log('Admin user created! Email: admin@trapo.com, Password: Admin123!');
       } else {
         if (existingAdmin.status !== 'approved' || existingAdmin.role !== 'admin') {
           const userIndex = users.findIndex(u => u.email === adminEmail);
+          if (userIndex !== -1 && users[userIndex].password !== adminPassword) {
+            users[userIndex].password = adminPassword;
+          }
           users[userIndex].status = 'approved';
           users[userIndex].role = 'admin';
           localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
