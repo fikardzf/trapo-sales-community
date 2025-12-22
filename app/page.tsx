@@ -6,7 +6,7 @@
 
 import React, { useState, useMemo, useRef, ChangeEvent, useEffect } from 'react';
 import Image from 'next/image';
-import { saveUser, findUser, seedAdminUser } from '@/lib/dummyDb';
+import { saveUser, findUser, findUserByIdentifier, updateUserPasswordByIdentifier, seedAdminUser } from '@/lib/dummyDb';
 import { useNavigation } from '@/lib/useNavigation';
 // --- SWEETALERT ---
 // Import library SweetAlert2
@@ -60,6 +60,14 @@ const Page = () => {
   
   const handleFormSwitch = (formType: 'login' | 'register' | 'forgotPassword') => {
     setActiveForm(formType);
+  };
+
+  const goToLogin = () => {
+    // Centralized navigation back to login + cleanup (prevents UI getting stuck)
+    setActiveForm('login');
+    setEmailError('');
+    setPhoneNumberError('');
+    setPasswordError('');
   };
 
   useEffect(() => {
@@ -138,7 +146,32 @@ const Page = () => {
         }
         setEmailError('');
       }
-    } else if (activeForm === 'register') {
+    }
+
+    // Forgot password validation (dev reset flow)
+    if (activeForm === 'forgotPassword') {
+      if (!email.trim() && !phoneTrimmed) {
+        setEmailError('Email Address or Phone Number is required');
+        setPhoneNumberError('Email Address or Phone Number is required');
+        isValid = false;
+      } else {
+        // Email is the primary identifier in UI
+        if (email.trim() && !/^\S+@\S+\.\S+$/.test(email)) {
+          setEmailError('Invalid email format');
+          isValid = false;
+        } else {
+          setEmailError('');
+        }
+
+        if (phoneTrimmed && phoneTrimmed.length < 9) {
+          setPhoneNumberError('Phone number seems too short');
+          isValid = false;
+        } else {
+          setPhoneNumberError('');
+        }
+      }
+    }
+ else if (activeForm === 'register') {
       if (!email.trim()) {
         setEmailError('Email Address is required');
         isValid = false;
@@ -341,14 +374,73 @@ const Page = () => {
     }
 
     if (activeForm === 'forgotPassword') {
-      const forgotIdentifier = email || `${countryCode}${phoneNumber}`;
-      // --- SWEETALERT ---
-      await Swal.fire({
-        icon: 'info',
-        title: 'Password Reset',
-        text: `If an account exists for ${forgotIdentifier}, a password reset link has been "sent".`,
+      const forgotIdentifier = (email || `${countryCode}${phoneNumber}`).trim();
+
+      // Dev-only: langsung reset password di localStorage (tanpa email/link)
+      const targetUser = findUserByIdentifier(forgotIdentifier);
+      if (!targetUser) {
+        await Swal.fire({
+          icon: 'error',
+          title: 'User Not Found',
+          text: 'No user found for that email/phone. Please register first.',
+        });
+        return;
+      }
+
+      const result = await Swal.fire({
+        title: 'Set New Password',
+        html: `
+          <input id="swal-new-password" class="swal2-input" type="password" placeholder="New password" autocomplete="new-password" />
+          <input id="swal-confirm-password" class="swal2-input" type="password" placeholder="Confirm password" autocomplete="new-password" />
+          <p style="margin: 8px 0 0; font-size: 12px; color: #6b7280; text-align: left;">
+            Password rules: min 8 chars, 1 uppercase, 1 lowercase, 1 special character.
+          </p>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Update Password',
+        preConfirm: () => {
+          const newPassword = (document.getElementById('swal-new-password') as HTMLInputElement)?.value || '';
+          const confirmPassword = (document.getElementById('swal-confirm-password') as HTMLInputElement)?.value || '';
+
+          const hasUpper = /[A-Z]/.test(newPassword);
+          const hasLower = /[a-z]/.test(newPassword);
+          const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
+
+          if (newPassword.length < 8 || !hasUpper || !hasLower || !hasSpecial) {
+            Swal.showValidationMessage('Password does not meet the requirements.');
+            return null;
+          }
+          if (newPassword !== confirmPassword) {
+            Swal.showValidationMessage('Password confirmation does not match.');
+            return null;
+          }
+          return newPassword;
+        },
       });
-      setActiveForm('login');
+
+      if (!result.isConfirmed || !result.value) return;
+
+      try {
+        updateUserPasswordByIdentifier(forgotIdentifier, result.value as string);
+
+        await Swal.fire({
+          icon: 'success',
+          title: 'Password Updated',
+          text: 'Your password has been updated. Please login with your new password.',
+          timer: 2200,
+          showConfirmButton: false,
+        });
+
+        // Ensure UI returns to login (and clears error states)
+        goToLogin();
+      } catch (err: any) {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Reset Failed',
+          text: err?.message || 'Failed to reset password.',
+        });
+      }
     }
   };
   

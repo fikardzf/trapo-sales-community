@@ -91,12 +91,83 @@ export const findUser = (emailOrPhone: string, password: string): User | null =>
   try {
     if (typeof window !== 'undefined') {
       const users = getUsers();
-      return users.findUser(u => (u.email === emailOrPhone || `${u.countryCode}${u.phoneNumber}` === emailOrPhone) && u.password === password) || null;
+      const id = (emailOrPhone || '').trim();
+      const idLower = id.toLowerCase();
+      const normalizedId = id.replace(/\s/g, '');
+
+      return (
+        users.find((u) => {
+          const emailMatch = (u.email || '').toLowerCase() === idLower;
+          const phoneMatch = `${u.countryCode || ''}${u.phoneNumber || ''}`.replace(/\s/g, '') === normalizedId;
+          const passMatch = (u.password || '') === password;
+          return (emailMatch || phoneMatch) && passMatch;
+        }) || null
+      );
     }
     return null;
   } catch (error) {
     console.error('Error finding user:', error);
     return null;
+  }
+};
+
+
+/**
+ * Mencari user berdasarkan identifier (email atau nomor telepon lengkap) tanpa password.
+ * Berguna untuk fitur reset password di environment development.
+ */
+export const findUserByIdentifier = (emailOrPhone: string): User | null => {
+  try {
+    if (typeof window !== 'undefined') {
+      const users = getUsers();
+      const id = (emailOrPhone || '').trim();
+      const idLower = id.toLowerCase();
+      const normalizedId = id.replace(/\s/g, '');
+
+      return (
+        users.find((u) => {
+          const emailMatch = (u.email || '').toLowerCase() === idLower;
+          const phoneMatch = `${u.countryCode || ''}${u.phoneNumber || ''}`.replace(/\s/g, '') === normalizedId;
+          return emailMatch || phoneMatch;
+        }) || null
+      );
+    }
+    return null;
+  } catch (error) {
+    console.error('Error finding user by identifier:', error);
+    return null;
+  }
+};
+
+/**
+ * Update password berdasarkan identifier (email / phone lengkap).
+ * Untuk dev: tidak mengirim email/link; langsung update ke localStorage.
+ * @throws Error jika user tidak ditemukan.
+ */
+export const updateUserPasswordByIdentifier = (emailOrPhone: string, newPassword: string): void => {
+  try {
+    if (typeof window !== 'undefined') {
+      const users = getUsers();
+      const id = (emailOrPhone || '').trim();
+      const idLower = id.toLowerCase();
+      const normalizedId = id.replace(/\s/g, '');
+
+      const userIndex = users.findIndex((u) => {
+        const emailMatch = (u.email || '').toLowerCase() === idLower;
+        const phoneMatch = `${u.countryCode || ''}${u.phoneNumber || ''}`.replace(/\s/g, '') === normalizedId;
+        return emailMatch || phoneMatch;
+      });
+
+      if (userIndex === -1) {
+        throw new Error('User not found.');
+      }
+
+      users[userIndex].password = newPassword;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+    }
+  } catch (error) {
+    console.error('Error updating password:', error);
+    throw error;
   }
 };
 
@@ -130,7 +201,9 @@ export const seedAdminUser = () => {
       const users = getUsers();
       const adminEmail = 'admin@trapo.com';
       const adminPassword = 'Admin123!';
-      const existingAdmin = users.find(u => u.email === adminEmail);
+
+      const adminIndex = users.findIndex((u) => (u.email || '').toLowerCase() === adminEmail);
+      const existingAdmin = adminIndex !== -1 ? users[adminIndex] : null;
 
       if (!existingAdmin) {
         const adminUser: User = {
@@ -139,27 +212,40 @@ export const seedAdminUser = () => {
           email: adminEmail,
           countryCode: '+62',
           phoneNumber: '8112233445',
-          password: 'Admin123!',
+          password: adminPassword,
           role: 'admin',
           status: 'approved',
           createdAt: new Date(),
         };
+
         users.push(adminUser);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-        console.log('Admin user created! Email: admin@trapo.com, Password: Admin123!');
+        console.log(`Admin user created! Email: ${adminEmail}, Password: ${adminPassword}`);
+        return;
+      }
+
+      // Ensure admin has correct role/status and latest password (dev-only seed & migration)
+      let changed = false;
+
+      if (existingAdmin.role !== 'admin') {
+        existingAdmin.role = 'admin';
+        changed = true;
+      }
+      if (existingAdmin.status !== 'approved') {
+        existingAdmin.status = 'approved';
+        changed = true;
+      }
+      if ((existingAdmin.password || '') !== adminPassword) {
+        existingAdmin.password = adminPassword;
+        changed = true;
+      }
+
+      if (changed) {
+        users[adminIndex] = existingAdmin;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+        console.log('Existing admin user migrated (role/status/password).');
       } else {
-        if (existingAdmin.status !== 'approved' || existingAdmin.role !== 'admin') {
-          const userIndex = users.findIndex(u => u.email === adminEmail);
-          if (userIndex !== -1 && users[userIndex].password !== adminPassword) {
-            users[userIndex].password = adminPassword;
-          }
-          users[userIndex].status = 'approved';
-          users[userIndex].role = 'admin';
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-          console.log('Existing admin user updated to approved status.');
-        } else {
-          console.log('Admin user already exists and is approved.');
-        }
+        console.log('Admin user already exists and is up to date.');
       }
     }
   } catch (error) {
