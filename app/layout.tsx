@@ -1,10 +1,19 @@
 // app/layout.tsx
 
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css"; // Pastikan path ini benar
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+// Gunakan font yang sama untuk seluruh app (login + dashboard)
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "TRAPO Sales Community",
@@ -19,9 +28,7 @@ export default function RootLayout({
   return (
     // HANYA ADA SATU <html> DAN SATU <body> DI SELURUH APLIKASI
     <html lang="en">
-      <body className={inter.className}>
-        {children}
-      </body>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
     </html>
   );
 }
