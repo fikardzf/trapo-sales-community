@@ -1,24 +1,27 @@
 // app/page.tsx
 
-/* app/page.tsx */
-
 'use client';
 
 import React, { useState, useMemo, useRef, ChangeEvent, useEffect } from 'react';
 import Image from 'next/image';
-import { saveUser, findUser, findUserByIdentifier, updateUserPasswordByIdentifier, seedAdminUser } from '@/lib/dummyDb';
+import { seedAdminUser } from '../lib/dummyDb';
+import { saveUser, findUser, findUserByIdentifier, updateUserPasswordByIdentifier, seedAminUser } from '../lib/dummyDb';
 import { useNavigation } from '@/lib/useNavigation';
-// --- SWEETALERT ---
-// Import library SweetAlert2
+import LoginForm from './auth/components/login/login_form';
+import RegisterForm from './auth/components/register/register_form';
+import ForgotPasswordForm from './auth/components/forgotPassword/forgot_password_form';
 import Swal from 'sweetalert2';
+import { useRouter } from 'next/router';
+
+const nav = useNavigation();
+  const router = useRouter();
+  return router;
 
 const Page = () => {
-  const nav = useNavigation();
   const [activeForm, setActiveForm] = useState<'login' | 'register' | 'forgotPassword'>('login');
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
-  
   const [isFieldVisible, setIsFieldVisible] = useState(true);
-
+  
   // Form states
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -171,7 +174,7 @@ const Page = () => {
         }
       }
     }
- else if (activeForm === 'register') {
+ else if (activeForm === 'register_form') {
       if (!email.trim()) {
         setEmailError('Email Address is required');
         isValid = false;
@@ -239,7 +242,7 @@ const Page = () => {
       }
     }
 
-    if (activeForm === 'register') {
+    if (activeForm === 'register_form') {
       if (!idCardImage) {
         setIdCardError('ID Card Image is required');
         isValid = false;
