@@ -20,8 +20,23 @@
 }
 
 body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   background: var(--background);
   color: var(--foreground);
   /* Gunakan font yang diset oleh next/font (Geist) agar konsisten di semua page */
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;  /* Prevent horizontal scrolling on mobile */
+  }
+  .your-container-class {
+    width: 100%;
+    padding: 10px; /* Ensure padding adjusts for mobile */
+  }
 }

@@ -463,8 +463,8 @@ const Page = () => {
   }, [activeForm]);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 sm:py-8 md:py-10">
-      <div className="mx-auto flex w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm min-h-[calc(100vh-3rem)]">
+    <div className="min-h-screen w-full flex items-center justify-center">
+      <div className="w-full max-w-screen-x1 px-4">
         
         {/* Logo untuk mobile dipindahkan ke paling atas */}
         <div className="flex justify-center md:hidden p-4 bg-white shadow-sm">
@@ -479,11 +479,10 @@ const Page = () => {
               {/* Form Login - Index 0 */}
               <div className="w-full flex-shrink-0 flex items-center justify-center p-4 sm:p-6 md:p-12">
                 <div className="w-full md:max-w-sm">
-                  <h2 className="text-2xl md:text-3xl font-semibold mb-6 text-gray-800 leading-snug">
+                  <h2 className="text-lg sm:text-xl md:text-3xl font-semibold mb-6 mobile-title-center text-gray-800">
                   Sign in to<br />
                   <span className="block">TRAPO Sales Community</span>
                   </h2>
-
                   
                   <div className="flex bg-gray-100 p-1 rounded-lg mb-6">
                     <button type="button" onClick={() => handleLoginMethodChange('email')} className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-300 ${loginMethod === 'email' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>Email</button>
