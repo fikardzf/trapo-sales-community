@@ -114,7 +114,8 @@ const Page = () => {
       }
 
       // 3. Validasi Dimensi (Min 600x400 px)
-      const img = new Image();
+    if (typeof window !== 'undefined') { 
+      const img = new window.Image();
       const objectUrl = URL.createObjectURL(file);
 
       img.onload = () => {
@@ -143,6 +144,7 @@ const Page = () => {
       };
 
       img.src = objectUrl;
+    }
     }
   };
   
@@ -353,15 +355,16 @@ const Page = () => {
           title: 'Registration Successful!',
           text: 'Your account has been created and is pending approval. Please login after it\'s approved.',
         });
-        setActiveForm('login');
+      
+      setTimeout(() => {
+        goToLogin();
         setFullName('');
-        setEmail('');
-        setPhoneNumber('');
-        setPassword('');
         setIdCardImage(null);
         setInstagram('');
         setTiktok('');
         setFacebook('');
+      }, 0); // Delay 0ms, tapi dieksekusi setelah event loop selesai
+
       } catch (error: any) {
         await Swal.fire({
           icon: 'error',
@@ -450,10 +453,10 @@ const Page = () => {
   
   const imageConfig = useMemo(() => {
     switch (activeForm) {
-      case 'login': return { src: '/images/login_form.png', alt: 'Login Illustration' };
+      case 'login': return { src: '/images/login_form_baru.png', alt: 'Login Illustration' };
       case 'register': return { src: '/images/register_form.png', alt: 'Register Illustration' };
       case 'forgotPassword': return { src: '/images/forgot_password.png', alt: 'Forgot Password Illustration' };
-      default: return { src: '/images/login_form.png', alt: 'Login Illustration' };
+      default: return { src: '/images/login_form_baru.png', alt: 'Login Illustration' };
     }
   }, [activeForm]);
 
@@ -465,8 +468,11 @@ const Page = () => {
       <div className="w-full md:w-2/5 h-full bg-white relative overflow-hidden flex flex-col">
         
         {/* Mobile Logo Header (Hanya muncul di mobile) */}
-        <div className="flex md:hidden justify-center items-center p-4 border-b border-gray-100 shrink-0">
-          <Image src="/images/logo_trapo.png" alt="TRAPO Logo" width={40} height={40} className="object-contain" />
+        <div className="flex md:hidden justify-center items-center 
+        p-4 border-b border-gray-100 shrink-0">
+          <Image src="/images/logo_trapo.png"
+           alt="TRAPO Logo" width={80} height={80} 
+           className="object-contain" />
         </div>
 
         {/* Container Sliding untuk Forms */}
@@ -475,7 +481,8 @@ const Page = () => {
           {/* Form Login - Index 0 */}
           <div className="w-full flex-shrink-0 h-full overflow-y-auto custom-scrollbar flex items-center justify-center p-6 md:p-12">
             <div className="w-full max-w-md">
-              <h2 className="text-3xl font-semibold mb-6 text-gray-800">
+              <h2 className="text-lg sm:text-xl md:text-3xl 
+              font-semibold mb-6 text-gray-800">
               Sign in to<br />
               <span className="block text-blue-600">TRAPO Sales Community</span>
               </h2>
@@ -532,7 +539,12 @@ const Page = () => {
           {/* Form Register - Index 1 */}
           <div className="w-full flex-shrink-0 h-full overflow-y-auto custom-scrollbar flex items-center justify-center p-6 md:p-12">
             <div className="w-full max-w-md">
-              <h2 className="text-3xl font-semibold mb-6 text-gray-800">Create a New Account</h2>
+              <h2 className="text-2xl md:text-3xl font-semibold mb-2 text-gray-800">
+               Let's start the journey</h2>
+              
+              <p className="text-1xl text-green-600 mb-6">
+                Sign up below
+              </p>
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label><input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />{fullNameError && <p className="text-red-500 text-xs mt-1">{fullNameError}</p>}</div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />{emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}</div>
