@@ -4,24 +4,17 @@
 
 import React, { useState, useMemo, useRef, ChangeEvent, useEffect } from 'react';
 import Image from 'next/image';
-import { seedAdminUser } from '../lib/dummyDb';
-import { saveUser, findUser, findUserByIdentifier, updateUserPasswordByIdentifier, seedAminUser } from '../lib/dummyDb';
+import { saveUser, findUser, findUserByIdentifier, updateUserPasswordByIdentifier, seedAdminUser } from '@/lib/dummyDb';
 import { useNavigation } from '@/lib/useNavigation';
-import LoginForm from './auth/components/login/login_form';
-import RegisterForm from './auth/components/register/register_form';
-import ForgotPasswordForm from './auth/components/forgotPassword/forgot_password_form';
 import Swal from 'sweetalert2';
-import { useRouter } from 'next/router';
-
-const nav = useNavigation();
-  const router = useRouter();
-  return router;
 
 const Page = () => {
+  const nav = useNavigation();
   const [activeForm, setActiveForm] = useState<'login' | 'register' | 'forgotPassword'>('login');
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
-  const [isFieldVisible, setIsFieldVisible] = useState(true);
   
+  const [isFieldVisible, setIsFieldVisible] = useState(true);
+
   // Form states
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -66,7 +59,6 @@ const Page = () => {
   };
 
   const goToLogin = () => {
-    // Centralized navigation back to login + cleanup (prevents UI getting stuck)
     setActiveForm('login');
     setEmailError('');
     setPhoneNumberError('');
@@ -101,15 +93,56 @@ const Page = () => {
     }
   };
   
-  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setIdCardImage(event.target.result as string);
+      const file = e.target.files[0];
+
+      // 1. Validasi Tipe File (JPEG/PNG)
+      const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+      if (!validTypes.includes(file.type)) {
+        setIdCardError('Format harus JPEG atau PNG');
+        setIdCardImage(null);
+        return;
+      }
+
+      // 2. Validasi Ukuran File (Max 2 MB)
+      const maxSize = 2 * 1024 * 1024; 
+      if (file.size > maxSize) {
+        setIdCardError('Ukuran file maksimal 2 MB');
+        setIdCardImage(null);
+        return;
+      }
+
+      // 3. Validasi Dimensi (Min 600x400 px)
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        if (img.width < 600 || img.height < 400) {
+          setIdCardError('Dimensi gambar minimal 600x400 px');
+          setIdCardImage(null);
+          URL.revokeObjectURL(objectUrl);
+          return;
         }
+
+        // SUKSES: Upload file
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            setIdCardImage(event.target.result as string);
+            setIdCardError('');
+          }
+        };
+        reader.readAsDataURL(file);
+        URL.revokeObjectURL(objectUrl);
       };
-      reader.readAsDataURL(e.target.files[0]);
+
+      img.onerror = () => {
+        setIdCardError('Gagal memuat gambar. Silakan coba file lain.');
+        URL.revokeObjectURL(objectUrl);
+      };
+
+      img.src = objectUrl;
     }
   };
   
@@ -151,50 +184,7 @@ const Page = () => {
       }
     }
 
-    // Forgot password validation (dev reset flow)
     if (activeForm === 'forgotPassword') {
-      if (!email.trim() && !phoneTrimmed) {
-        setEmailError('Email Address or Phone Number is required');
-        setPhoneNumberError('Email Address or Phone Number is required');
-        isValid = false;
-      } else {
-        // Email is the primary identifier in UI
-        if (email.trim() && !/^\S+@\S+\.\S+$/.test(email)) {
-          setEmailError('Invalid email format');
-          isValid = false;
-        } else {
-          setEmailError('');
-        }
-
-        if (phoneTrimmed && phoneTrimmed.length < 9) {
-          setPhoneNumberError('Phone number seems too short');
-          isValid = false;
-        } else {
-          setPhoneNumberError('');
-        }
-      }
-    }
- else if (activeForm === 'register_form') {
-      if (!email.trim()) {
-        setEmailError('Email Address is required');
-        isValid = false;
-      } else if (!/^\S+@\S+\.\S+$/.test(email)) {
-        setEmailError('Please enter a valid email address');
-        isValid = false;
-      } else {
-        setEmailError('');
-      }
-      if (!phoneTrimmed) {
-        setPhoneNumberError('Phone Number is required');
-        isValid = false;
-      } else if (phoneTrimmed.length < 8) {
-        setPhoneNumberError('Please enter a valid phone number');
-        isValid = false;
-      } else {
-        setPhoneNumberError('');
-      }
-    } else {
-      // forgotPassword: allow email OR phone (at least one)
       const hasEmail = Boolean(email.trim());
       const hasPhone = Boolean(phoneTrimmed);
 
@@ -225,6 +215,25 @@ const Page = () => {
           setPhoneNumberError('');
         }
       }
+    } else if (activeForm === 'register') {
+      if (!email.trim()) {
+        setEmailError('Email Address is required');
+        isValid = false;
+      } else if (!/^\S+@\S+\.\S+$/.test(email)) {
+        setEmailError('Please enter a valid email address');
+        isValid = false;
+      } else {
+        setEmailError('');
+      }
+      if (!phoneTrimmed) {
+        setPhoneNumberError('Phone Number is required');
+        isValid = false;
+      } else if (phoneTrimmed.length < 8) {
+        setPhoneNumberError('Please enter a valid phone number');
+        isValid = false;
+      } else {
+        setPhoneNumberError('');
+      }
     }
     
     if (activeForm !== 'forgotPassword') {
@@ -242,7 +251,7 @@ const Page = () => {
       }
     }
 
-    if (activeForm === 'register_form') {
+    if (activeForm === 'register') {
       if (!idCardImage) {
         setIdCardError('ID Card Image is required');
         isValid = false;
@@ -250,7 +259,6 @@ const Page = () => {
         setIdCardError('');
       }
 
-      // Minimal 1 social media untuk kebutuhan verifikasi
       if (!hasAnySocial) {
         setSocialMediaError('Please fill at least one social media');
         isValid = false;
@@ -265,13 +273,9 @@ const Page = () => {
     return isValid;
   };
   
-  // --- SWEETALERT ---
-  // Tambahkan 'async' di sini karena kita akan menggunakan 'await' di dalamnya
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
-      // --- SWEETALERT ---
-      // Tampilkan notifikasi error jika validasi gagal
       await Swal.fire({
         icon: 'warning',
         title: 'Validation Failed',
@@ -285,8 +289,6 @@ const Page = () => {
       const user = findUser(loginIdentifier, password);
 
       if (user) {
-        // --- SWEETALERT ---
-        // Cek status user
         if (user.status === 'pending') {
           await Swal.fire({
             icon: 'info',
@@ -305,19 +307,15 @@ const Page = () => {
         }
 
         localStorage.setItem('loggedInUser', JSON.stringify(user));
-        // --- SWEETALERT ---
-        // Tampilkan notifikasi sukses
         await Swal.fire({
           icon: 'success',
           title: 'Login Successful!',
           text: `Welcome back, ${user.fullName}!`,
-          timer: 2000, // Auto close after 2 seconds
+          timer: 2000,
           showConfirmButton: false,
         });
         nav.replace('/dashboard');
       } else {
-        // --- SWEETALERT ---
-        // Tampilkan error + opsi register
         const result = await Swal.fire({
           title: 'Login Failed',
           text: 'Incorrect credentials or user not found. Do you want to create a new account?',
@@ -350,14 +348,12 @@ const Page = () => {
 
       try {
         saveUser(newUser);
-        // --- SWEETALERT ---
         await Swal.fire({
           icon: 'success',
           title: 'Registration Successful!',
           text: 'Your account has been created and is pending approval. Please login after it\'s approved.',
         });
         setActiveForm('login');
-        // Reset form fields
         setFullName('');
         setEmail('');
         setPhoneNumber('');
@@ -367,7 +363,6 @@ const Page = () => {
         setTiktok('');
         setFacebook('');
       } catch (error: any) {
-        // --- SWEETALERT ---
         await Swal.fire({
           icon: 'error',
           title: 'Registration Failed',
@@ -378,8 +373,6 @@ const Page = () => {
 
     if (activeForm === 'forgotPassword') {
       const forgotIdentifier = (email || `${countryCode}${phoneNumber}`).trim();
-
-      // Dev-only: langsung reset password di localStorage (tanpa email/link)
       const targetUser = findUserByIdentifier(forgotIdentifier);
       if (!targetUser) {
         await Swal.fire({
@@ -435,7 +428,6 @@ const Page = () => {
           showConfirmButton: false,
         });
 
-        // Ensure UI returns to login (and clears error states)
         goToLogin();
       } catch (err: any) {
         await Swal.fire({
@@ -466,171 +458,197 @@ const Page = () => {
   }, [activeForm]);
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center">
-      <div className="w-full max-w-screen-x1 px-4">
+    // Container Utama: Fixed full screen, overflow hidden
+    <div className="h-screen w-screen flex flex-col md:flex-row overflow-hidden bg-white">
+      
+      {/* DIV 1: Area Form - 40% di desktop, 100% di mobile */}
+      <div className="w-full md:w-2/5 h-full bg-white relative overflow-hidden flex flex-col">
         
-        {/* Logo untuk mobile dipindahkan ke paling atas */}
-        <div className="flex justify-center md:hidden p-4 bg-white shadow-sm">
-          <Image src="/images/logo_trapo.png" alt="TRAPO Logo" width={60} height={60} className="object-contain" />
+        {/* Mobile Logo Header (Hanya muncul di mobile) */}
+        <div className="flex md:hidden justify-center items-center p-4 border-b border-gray-100 shrink-0">
+          <Image src="/images/logo_trapo.png" alt="TRAPO Logo" width={40} height={40} className="object-contain" />
         </div>
 
-        {/* Container untuk Form dan Gambar */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* DIV 1: Area Form - 40% di desktop, 100% di mobile */}
-          <div className="w-full md:w-2/5 flex-shrink-0 relative overflow-hidden bg-white px-4 sm:px-6 md:px-0">
-            <div className="flex h-full transition-transform duration-500 ease-in-out" style={{ transform: slidePosition }}>
-              {/* Form Login - Index 0 */}
-              <div className="w-full flex-shrink-0 flex items-center justify-center p-4 sm:p-6 md:p-12">
-                <div className="w-full md:max-w-sm">
-                  <h2 className="text-lg sm:text-xl md:text-3xl font-semibold mb-6 mobile-title-center text-gray-800">
-                  Sign in to<br />
-                  <span className="block">TRAPO Sales Community</span>
-                  </h2>
-                  
-                  <div className="flex bg-gray-100 p-1 rounded-lg mb-6">
-                    <button type="button" onClick={() => handleLoginMethodChange('email')} className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-300 ${loginMethod === 'email' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>Email</button>
-                    <button type="button" onClick={() => handleLoginMethodChange('phone')} className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-300 ${loginMethod === 'phone' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>Phone Number</button>
+        {/* Container Sliding untuk Forms */}
+        <div className="flex h-full transition-transform duration-500 ease-in-out" style={{ transform: slidePosition }}>
+          
+          {/* Form Login - Index 0 */}
+          <div className="w-full flex-shrink-0 h-full overflow-y-auto custom-scrollbar flex items-center justify-center p-6 md:p-12">
+            <div className="w-full max-w-md">
+              <h2 className="text-3xl font-semibold mb-6 text-gray-800">
+              Sign in to<br />
+              <span className="block text-blue-600">TRAPO Sales Community</span>
+              </h2>
+              
+              <div className="flex bg-gray-100 p-1 rounded-lg mb-6">
+                <button type="button" onClick={() => handleLoginMethodChange('email')} className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-300 ${loginMethod === 'email' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>Email</button>
+                <button type="button" onClick={() => handleLoginMethodChange('phone')} className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-300 ${loginMethod === 'phone' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>Phone Number</button>
+              </div>
+
+              {/* --- BAGIAN EMAIL ADDRESS --- */}
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <div className="relative h-15 mb-8">
+                  <div className={`absolute inset-0 transition-opacity duration-300 ease-in-out ${isFieldVisible ? 'opacity-100' : 'opacity-0'}`}>
+                    {loginMethod === 'email' ? (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                        <div className="flex">
+                          <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex-shrink-0 px-3 py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            {countryCodes.map((c) => (<option key={c.code} value={c.code}>{c.abbr} {c.code}</option>))}
+                          </select>
+                          <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="812-3456-7890" className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                        {phoneNumberError && <p className="text-red-500 text-xs mt-1">{phoneNumberError}</p>}
+                      </div>
+                    )}
                   </div>
-
-                  <form className="space-y-4" onSubmit={handleSubmit}>
-                    <div className="relative h-24">
-                      <div className={`absolute inset-0 transition-opacity duration-300 ease-in-out ${isFieldVisible ? 'opacity-100' : 'opacity-0'}`}>
-                        {loginMethod === 'email' ? (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                            {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
-                          </div>
-                        ) : (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                            <div className="flex">
-                              <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex-shrink-0 px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                {countryCodes.map((c) => (<option key={c.code} value={c.code}>{c.abbr} {c.code}</option>))}
-                              </select>
-                              <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="812-3456-7890" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                            </div>
-                            {phoneNumberError && <p className="text-red-500 text-xs mt-1">{phoneNumberError}</p>}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                      <input type="password" value={password} onChange={handlePasswordChange} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                      {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
-                      <div className="mt-2 text-xs">
-                        <div className={`flex items-center ${hasUppercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasUppercase ? '✓' : '○'}</span><span>Must contain uppercase letter</span></div>
-                        <div className={`flex items-center ${hasLowercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasLowercase ? '✓' : '○'}</span><span>Must contain lowercase letter</span></div>
-                        <div className={`flex items-center ${hasNumber ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasNumber ? '✓' : '○'}</span><span>Must contain a number</span></div>
-                        <div className={`flex items-center ${hasSpecialChar ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasSpecialChar ? '✓' : '○'}</span><span>Must contain a special character</span></div>
-                      </div>
-                    </div>
-                    <div className="flex items-center"><input id="remember" type="checkbox" className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-300 rounded" /><label htmlFor="remember" className="ml-2 block text-sm text-gray-700">Remember me</label></div>
-                    <button type="submit" className="w-full p-2 sm:p-2 md:p-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium">Sign in</button>
-                    <div className="text-center space-y-2 text-sm">
-                      <button type="button" onClick={() => handleFormSwitch('register')} className="text-blue-500 hover:text-blue-600 transition-colors block">Don't have an account? Register</button>
-                      <button type="button" onClick={() => handleFormSwitch('forgotPassword')} className="text-blue-500 hover:text-blue-600 transition-colors block">Forgot Password?</button>
-                    </div>
-                  </form>
                 </div>
-              </div>
 
-              {/* Form Register - Index 1 */}
-              <div className="w-full flex-shrink-0 flex items-center justify-center p-4 sm:p-6 md:p-12">
-                <div className="w-full md:max-w-sm">
-                  <h2 className="text-lg sm:text-xl md:text-3xl font-semibold mb-6 text-gray-800">Create a New Account</h2>
-                  <form className="space-y-4" onSubmit={handleSubmit}>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label><input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />{fullNameError && <p className="text-red-500 text-xs mt-1">{fullNameError}</p>}</div>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />{emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}</div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                      <div className="flex">
-                        <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex-shrink-0 px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                          {countryCodes.map((c) => (<option key={c.code} value={c.code}>{c.abbr} {c.code}</option>))}
-                        </select>
-                        <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="812-3456-7890" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                      </div>
-                      {phoneNumberError && <p className="text-red-500 text-xs mt-1">{phoneNumberError}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-                      <input type="password" value={password} onChange={handlePasswordChange} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                      {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
-                      <div className="mt-2 text-xs">
-                        <div className={`flex items-center ${hasUppercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasUppercase ? '✓' : '○'}</span><span>Must contain uppercase letter</span></div>
-                        <div className={`flex items-center ${hasLowercase ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasLowercase ? '✓' : '○'}</span><span>Must contain lowercase letter</span></div>
-                        <div className={`flex items-center ${hasNumber ? 'text-green-600' : 'text-gray-400'}`}><span className="mr-1">{hasNumber ? '✓' : '○'}</span><span>Must contain a number</span></div>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">ID Card Image *</label>
-                      <div className="flex items-center space-x-3">
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="px-3 py-2 sm:py-2 md:py-3 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">Choose File</button>
-                        <span className="text-sm text-gray-600">{idCardImage ? 'Image selected' : 'No file chosen'}</span>
-                      </div>
-                      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                      {idCardImage && <div className="mt-3 relative w-32 h-32"><Image src={idCardImage} alt="ID Card Preview" fill className="object-cover rounded-md" /></div>}
-                      {idCardError && <p className="text-red-500 text-xs mt-1">{idCardError}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Instagram (Optional)</label>
-                      <div className="flex">
-                        <span className="inline-flex items-center px-2 sm:px-2 md:px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
-                        <input type="text" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="username" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">TikTok (Optional)</label>
-                      <div className="flex">
-                        <span className="inline-flex items-center px-2 sm:px-2 md:px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
-                        <input type="text" value={tiktok} onChange={(e) => setTiktok(e.target.value)} placeholder="username" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Facebook (Optional)</label>
-                      <div className="flex">
-                        <span className="inline-flex items-center px-2 sm:px-2 md:px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
-                        <input type="text" value={facebook} onChange={(e) => setFacebook(e.target.value)} placeholder="username" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                      </div>
-                      {socialMediaError && <p className="text-red-500 text-xs mt-1">{socialMediaError}</p>}
-                    </div>
-                    <button type="submit" className="w-full p-2 sm:p-2 md:p-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium">Register</button>
-                    <div className="text-center text-sm"><button type="button" onClick={() => handleFormSwitch('login')} className="text-blue-500 hover:text-blue-600 transition-colors">Already have an account? Login</button></div>
-                  </form>
+                {/* --- BAGIAN PASSWORD --- */}
+                <div className="mb-8">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <input type="password" value={password} onChange={handlePasswordChange} className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
                 </div>
-              </div>
-
-              {/* Form Forgot Password - Index 2 */}
-              <div className="w-full flex-shrink-0 flex items-center justify-center p-4 sm:p-6 md:p-12">
-                <div className="w-full md:max-w-sm">
-                  <h2 className="text-lg sm:text-xl md:text-3xl font-semibold mb-6 text-gray-800">Reset Your Password</h2>
-                  <form className="space-y-4" onSubmit={handleSubmit}>
-                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />{emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}</div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number (Optional)</label>
-                      <div className="flex">
-                        <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex-shrink-0 px-3 py-2 sm:py-2 md:py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
-                          {countryCodes.map((c) => (<option key={c.code} value={c.code}>{c.abbr} {c.code}</option>))}
-                        </select>
-                        <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="812-3456-7890" className="w-full p-2 sm:p-2 md:p-3 text-sm text-gray-900 border border-gray-200 rounded-r-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />
-                      </div>
-                      {phoneNumberError && <p className="text-red-500 text-xs mt-1">{phoneNumberError}</p>}
-                    </div>
-                    <button type="submit" className="w-full p-2 sm:p-2 md:p-3 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors font-medium">Reset Password</button>
-                    <div className="text-center text-sm"><button type="button" onClick={() => handleFormSwitch('login')} className="text-blue-500 hover:text-blue-600 transition-colors">Back to Login</button></div>
-                  </form>
+                
+                {/* --- BAGIAN REMEMBER ME & SUBMIT BUTTON --- */}
+                <div className="flex items-center mb-4">
+                <input id="remember" type="checkbox" className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-gray-300 rounded" /><label htmlFor="remember" className="ml-2 block text-sm text-gray-700">Remember me</label></div>
+                <button type="submit" className="w-full p-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium">Sign in</button>
+                <div className="text-center space-y-2 text-sm">
+                  <button type="button" onClick={() => handleFormSwitch('register')} className="text-blue-500 hover:text-blue-600 transition-colors block">Don't have an account? Register</button>
+                  <button type="button" onClick={() => handleFormSwitch('forgotPassword')} className="text-blue-500 hover:text-blue-600 transition-colors block">Forgot Password?</button>
                 </div>
-              </div>
+              </form>
             </div>
           </div>
 
-          {/* DIV 2: Area Gambar - 60% di desktop, 100% di mobile */}
-          <div className="w-full md:w-3/5 bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 sm:p-6 md:p-8">
-            <div className="relative w-full h-40 sm:h-48 md:h-64 lg:h-80 xl:h-full max-w-xs sm:max-w-sm md:max-w-lg">
-              <Image src={imageConfig.src} alt={imageConfig.alt} fill className="object-contain" priority />
+          {/* Form Register - Index 1 */}
+          <div className="w-full flex-shrink-0 h-full overflow-y-auto custom-scrollbar flex items-center justify-center p-6 md:p-12">
+            <div className="w-full max-w-md">
+              <h2 className="text-3xl font-semibold mb-6 text-gray-800">Create a New Account</h2>
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label><input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />{fullNameError && <p className="text-red-500 text-xs mt-1">{fullNameError}</p>}</div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />{emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}</div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                  <div className="flex">
+                    <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex-shrink-0 px-3 py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                      {countryCodes.map((c) => (<option key={c.code} value={c.code}>{c.abbr} {c.code}</option>))}
+                    </select>
+                    <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="812-3456-7890" className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                  </div>
+                  {phoneNumberError && <p className="text-red-500 text-xs mt-1">{phoneNumberError}</p>}
+                </div>
+                <div>
+
+                  {/* --- BAGIAN PASSWORD DENGAN VALIDASI --- */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                      <input type="password" value={password} onChange={handlePasswordChange} className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                      {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
+                      
+                      {/* Teks Indikator Single Line yang Berubah Warna */}
+                      {password && (
+                        <p className={`mt-2 text-xs transition-colors duration-300 ${
+                          hasUppercase && hasLowercase && hasNumber && hasSpecialChar 
+                            ? 'text-green-600' 
+                            : 'text-gray-400'
+                        }`}>
+                          Create a strong password using a mix of uppercase and lowercase letters, numbers, and special characters.
+                        </p>
+                      )}
+                    </div>
+
+
+                  {/* --- BAGIAN UPLOAD ID CARD IMAGE --- */}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ID Card Image *</label>
+                  <div className="flex items-center space-x-3">
+                    <button type="button" onClick={() => fileInputRef.current?.click()} 
+                    className="px-3 py-3 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">Choose File</button>
+                    <span className="text-sm text-gray-600">{idCardImage ? 'Image selected' : 'No file chosen'}</span>
+                  </div>
+                  
+                  <p className="text-xs text-gray-500 mt-2">
+                    Upload ID Card Image (JPEG/PNG, max 2 MB, min dimensions 600x400 px
+                  </p>
+
+                  <input ref={fileInputRef} type="file" accept="image/png, image/jpeg, image/jpg" onChange={handleImageUpload} className="hidden" />
+                  {idCardImage && <div className="mt-3 relative w-32 h-32"><Image src={idCardImage} alt="ID Card Preview" fill className="object-cover rounded-md" /></div>}
+                  {idCardError && <p className="text-red-500 text-xs mt-1">{idCardError}</p>}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Instagram (Optional)</label>
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
+                    <input type="text" value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="username" className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">TikTok (Optional)</label>
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
+                    <input type="text" value={tiktok} onChange={(e) => setTiktok(e.target.value)} placeholder="username" className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Facebook (Optional)</label>
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md">@</span>
+                    <input type="text" value={facebook} onChange={(e) => setFacebook(e.target.value)} placeholder="username" className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                  </div>
+                  {socialMediaError && <p className="text-red-500 text-xs mt-1">{socialMediaError}</p>}
+                </div>
+                <button type="submit" className="w-full p-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium">Register</button>
+                <div className="text-center text-sm"><button type="button" onClick={() => handleFormSwitch('login')} className="text-blue-500 hover:text-blue-600 transition-colors">Already have an account? Login</button></div>
+              </form>
             </div>
+          </div>
+
+          {/* Form Forgot Password - Index 2 */}
+          <div className="w-full flex-shrink-0 h-full overflow-y-auto custom-scrollbar flex items-center justify-center p-6 md:p-12">
+            <div className="w-full max-w-md">
+              <h2 className="text-3xl font-semibold mb-6 text-gray-800">Reset Your Password</h2>
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />{emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}</div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number (Optional)</label>
+                  <div className="flex">
+                    <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="flex-shrink-0 px-3 py-3 text-sm text-gray-900 bg-gray-200 border border-r-0 border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
+                      {countryCodes.map((c) => (<option key={c.code} value={c.code}>{c.abbr} {c.code}</option>))}
+                    </select>
+                    <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="812-3456-7890" className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />
+                  </div>
+                  {phoneNumberError && <p className="text-red-500 text-xs mt-1">{phoneNumberError}</p>}
+                </div>
+                <button type="submit" className="w-full p-3 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors font-medium">Reset Password</button>
+                <div className="text-center text-sm"><button type="button" onClick={() => handleFormSwitch('login')} className="text-blue-500 hover:text-blue-600 transition-colors">Back to Login</button></div>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* DIV 2: Area Gambar - 60% di desktop, Hidden di mobile */}
+      <div className="hidden md:flex md:w-3/5 h-full bg-gradient-to-br from-blue-50 to-indigo-100 items-center justify-center p-8 relative">
+        {/* Background pattern or decorative elements could go here */}
+        <div className="relative w-full h-full flex items-center justify-center">
+          <div className="relative w-3/4 h-3/4 max-w-2xl">
+            <Image 
+              src={imageConfig.src} 
+              alt={imageConfig.alt} 
+              fill 
+              className="object-contain drop-shadow-2xl" 
+              priority 
+            />
           </div>
         </div>
       </div>

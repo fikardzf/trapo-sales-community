@@ -1,7 +1,7 @@
 // lib/useNavigation.ts
 
 'use client';
-import { useRouter } from 'next/router';
+
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 
@@ -11,7 +11,6 @@ import { useMemo } from 'react';
  */
 export const useNavigation = () => {
   const router = useRouter();
-  return router;
 
   return useMemo(
     () => ({

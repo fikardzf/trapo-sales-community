@@ -1,19 +1,23 @@
 // app/layout.tsx
 
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
-import "./styles/globals.css"; // Perbaiki path ke "./styles/globals.css"
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
 
-// Menggunakan font Poppins
-const poppins = Poppins({
-  weight: ['400', '500', '600', '700'], // Anda bisa menyesuaikan dengan weight yang diperlukan
-  subsets: ['latin'],
-  variable: '--font-poppins', // Tentukan nama variabel font
+// Gunakan font yang sama untuk seluruh app (login + dashboard)
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: "TRAPO Sales Community",
-  description: "A community for TRAPO sales",
+  description: "A community for TRPO sales",
 };
 
 export default function RootLayout({
@@ -22,8 +26,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
+    // HANYA ADA SATU <html> DAN SATU <body> DI SELURUH APLIKASI
     <html lang="en">
-      <body className={`${poppins.variable} antialiased`}>{children}</body>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
     </html>
   );
 }
