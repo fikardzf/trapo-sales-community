@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { saveUser, findUser, findUserByIdentifier, updateUserPasswordByIdentifier, seedAdminUser } from '@/lib/dummyDb';
 import { useNavigation } from '@/lib/useNavigation';
 import Swal from 'sweetalert2';
+import { FaEye, FaEyeSlash } from "react-icons/fa6";
 
 const Page = () => {
   const nav = useNavigation();
@@ -39,6 +40,10 @@ const Page = () => {
   const [passwordError, setPasswordError] = useState('');
   const [idCardError, setIdCardError] = useState('');
   const [socialMediaError, setSocialMediaError] = useState('');
+  const [showPassword, setShowPassword] = useState<{ login: Boolean; register: boolean }>({
+    login: false,
+    register: false,
+  });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -93,40 +98,22 @@ const Page = () => {
     }
   };
   
-    const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+      const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-
-      // 1. Validasi Tipe File (JPEG/PNG)
       const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
       if (!validTypes.includes(file.type)) {
         setIdCardError('Format harus JPEG atau PNG');
         setIdCardImage(null);
         return;
       }
-
-      // 2. Validasi Ukuran File (Max 2 MB)
       const maxSize = 2 * 1024 * 1024; 
       if (file.size > maxSize) {
         setIdCardError('Ukuran file maksimal 2 MB');
         setIdCardImage(null);
         return;
       }
-
-      // 3. Validasi Dimensi (Min 600x400 px)
-    if (typeof window !== 'undefined') { 
-      const img = new window.Image();
-      const objectUrl = URL.createObjectURL(file);
-
-      img.onload = () => {
-        if (img.width < 600 || img.height < 400) {
-          setIdCardError('Dimensi gambar minimal 600x400 px');
-          setIdCardImage(null);
-          URL.revokeObjectURL(objectUrl);
-          return;
-        }
-
-        // SUKSES: Upload file
+      if (typeof window !== 'undefined') { 
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target?.result) {
@@ -135,19 +122,14 @@ const Page = () => {
           }
         };
         reader.readAsDataURL(file);
-        URL.revokeObjectURL(objectUrl);
-      };
-
-      img.onerror = () => {
-        setIdCardError('Gagal memuat gambar. Silakan coba file lain.');
-        URL.revokeObjectURL(objectUrl);
-      };
-
-      img.src = objectUrl;
-    }
+      }
     }
   };
-  
+
+  const togglePasswordVisibility = (form: 'login' | 'register') => {
+    setShowPassword(prev => ({ ...prev, [form]: !prev[form] }));
+  };
+
   const validateForm = () => {
     let isValid = true;
     const phoneTrimmed = phoneNumber.trim();
@@ -517,12 +499,29 @@ const Page = () => {
                   </div>
                 </div>
 
-                {/* --- BAGIAN PASSWORD --- */}
-                <div className="mb-8">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                  <input type="password" value={password} onChange={handlePasswordChange} className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                  {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
-                </div>
+                    {/* --- BAGIAN PASSWORD --- */}
+                    <div className="mb-4 relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                      <div className="relative">
+                        <input 
+                          type={showPassword.login ? 'text' : 'password'} 
+                          value={password} 
+                          onChange={handlePasswordChange} 
+                          className="w-full p-3 pr-10 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => togglePasswordVisibility('login')}
+                          tabIndex={-1}
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+                          aria-label={showPassword.login ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword.login ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
+                      {/* Indikator detail dihapus di sini */}
+                    </div>
                 
                 {/* --- BAGIAN REMEMBER ME & SUBMIT BUTTON --- */}
                 <div className="flex items-center mb-4">
@@ -561,9 +560,25 @@ const Page = () => {
                 <div>
 
                   {/* --- BAGIAN PASSWORD DENGAN VALIDASI --- */}
-                    <div className="mb-4">
+                    <div className="mb-4 relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-                      <input type="password" value={password} onChange={handlePasswordChange} className="w-full p-3 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                      <div className="relative">
+                        <input 
+                          type={showPassword.register ? 'text' : 'password'} 
+                          value={password} 
+                          onChange={handlePasswordChange} 
+                          className="w-full p-3 pr-10 text-sm text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => togglePasswordVisibility('register')}
+                          tabIndex={-1}
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+                          aria-label={showPassword.register ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword.register ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
+                        </button>
+                      </div>
                       {passwordError && <p className="text-red-500 text-xs mt-1">{passwordError}</p>}
                       
                       {/* Teks Indikator Single Line yang Berubah Warna */}
@@ -588,7 +603,7 @@ const Page = () => {
                   </div>
                   
                   <p className="text-xs text-gray-500 mt-2">
-                    Upload ID Card Image (JPEG/PNG, max 2 MB, min dimensions 600x400 px
+                    Upload ID Card Image (JPEG/PNG, max 2 MB).
                   </p>
 
                   <input ref={fileInputRef} type="file" accept="image/png, image/jpeg, image/jpg" onChange={handleImageUpload} className="hidden" />

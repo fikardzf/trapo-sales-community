@@ -12,8 +12,9 @@ export interface User {
   tiktok?: string;
   facebook?: string;
   idCardImage?: string;
-  role: 'user' | 'admin';
-  status: 'pending' | 'approved' | 'rejected';
+  // UPDATE: Menambahkan opsi role baru agar sesuai dengan UI Memberlist
+  role: 'user' | 'admin' | 'member' | 'manager' | 'staff' | 'supervisor'; 
+  status: 'pending' | 'active' | 'deactive' | 'rejected';
   createdAt: Date;
 }
 
@@ -55,16 +56,32 @@ export const saveUser = (userData: Omit<User, 'id' | 'role' | 'status' | 'create
   try {
     if (typeof window !== 'undefined') {
       const users = getUsers();
-      const existingUser = users.find(u => u.email === userData.email || `${u.countryCode}${u.phoneNumber}` === `${userData.countryCode}${userData.phoneNumber}`);
+
+      // --- CEK 1: Apakah email sudah pernah di-REJECT? ---
+      // Ini adalah pemeriksaan paling penting dan harus didahulukan.
+      const isRejected = users.some(u => u.email === userData.email && u.status === 'rejected');
+      if (isRejected) {
+        throw new Error('This email has been previously rejected and cannot be used to register again.');
+      }
+
+      // --- CEK 2: Apakah email atau telepon sudah terdaftar (status pending, active, deactive)? ---
+      // Pemeriksaan ini mengabaikan user yang statusnya 'rejected' karena sudah ditangani di atas.
+      const existingUser = users.find(
+        u => u.status !== 'rejected' && (
+          u.email === userData.email || 
+          `${u.countryCode}${u.phoneNumber}` === `${userData.countryCode}${userData.phoneNumber}`
+        )
+      );
       
       if (existingUser) {
         throw new Error("Email or Phone Number already registered.");
       }
 
+      // --- JIKA LOLOS SEMUA CEK: Buat user baru ---
       const newUser: User = {
         ...userData,
         id: generateId(),
-        role: 'user',
+        role: 'member', // Ini sekarang valid karena interface sudah diupdate
         status: 'pending',
         createdAt: new Date(),
       };
@@ -74,10 +91,11 @@ export const saveUser = (userData: Omit<User, 'id' | 'role' | 'status' | 'create
       
       return newUser;
     }
-    throw new Error("localStorage is not available on the server.");
+    throw new Error("localStorage is not available on server.");
   } catch (error) {
     console.error('Error saving user to localStorage:', error);
-    throw error;
+    // Lempar kembali error agar bisa ditangkap dan ditampilkan di UI (dengan Swal.fire)
+    throw error; 
   }
 };
 
@@ -172,7 +190,7 @@ export const updateUserPasswordByIdentifier = (emailOrPhone: string, newPassword
 };
 
 /**
- * Memperbarui status user (misalnya, dari 'pending' menjadi 'approved') dengan penanganan SSR yang lebih baik.
+ * Memperbarui status user (misalnya, dari 'pending' menjadi 'active') dengan penanganan SSR yang lebih baik.
  * @param {string} email - Email user yang akan diperbarui.
  * @param {User['status']} newStatus - Status baru.
  */
@@ -214,7 +232,7 @@ export const seedAdminUser = () => {
           phoneNumber: '8112233445',
           password: adminPassword,
           role: 'admin',
-          status: 'approved',
+          status: 'active', // UPDATE: Diubah dari 'approved' ke 'active' agar sesuai Interface User
           createdAt: new Date(),
         };
 
@@ -231,8 +249,8 @@ export const seedAdminUser = () => {
         existingAdmin.role = 'admin';
         changed = true;
       }
-      if (existingAdmin.status !== 'approved') {
-        existingAdmin.status = 'approved';
+      if (existingAdmin.status !== 'active') { // UPDATE: Cek status 'active'
+        existingAdmin.status = 'active';
         changed = true;
       }
       if ((existingAdmin.password || '') !== adminPassword) {

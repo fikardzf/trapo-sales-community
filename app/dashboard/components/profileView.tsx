@@ -1,13 +1,20 @@
 // app/dashboard/components/profileView.tsx
 
-import React from 'react';
+'use client'; // Tambahkan 'use client' karena menggunakan state dan event handler
+
+import React, { useState } from 'react';
 import { User } from '@/lib/dummyDb';
+import Swal from 'sweetalert2'; // Import Swal untuk notifikasi
 
 interface ProfileViewProps {
   user: User;
 }
 
 const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
+  // State untuk form update profil
+  const [phoneNumber, setPhoneNumber] = useState(user.phoneNumber);
+  const [isProfileFormOpen, setIsProfileFormOpen] = useState(false);
+
   const getStatusColor = () => {
     switch (user?.status) {
       case 'approved': return 'text-green-600 bg-green-100';
@@ -17,15 +24,24 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
     }
   };
 
+  const handleProfileUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Phone Number Updated',
+      text: 'Your phone number has been successfully updated.',
+    });
+  };
+
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Profile</h1>
+      <h1 className="text-3xl font-bold text-gray-800 mb-6 hidden md:block">Profile</h1>
       
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-shrink-0">
             <div className="w-32 h-32 bg-indigo-100 rounded-full flex items-center justify-center">
-              {/* --- TAMBAHKAN OPTIONAL CHAINING --- */}
               <span className="text-4xl font-bold text-indigo-600">
                 {user?.fullName?.charAt(0).toUpperCase() || 'U'}
               </span>
@@ -34,28 +50,25 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
           
           <div className="flex-grow">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* --- KONTAINER PERSONAL INFORMATION --- */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm font-medium text-gray-700">Full Name</p>
-                    {/* --- TAMBAHKAN OPTIONAL CHAINING --- */}
                     <p className="font-medium text-gray-900">{user?.fullName || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-700">Email Address</p>
-                    {/* --- TAMBAHKAN OPTIONAL CHAINING --- */}
                     <p className="font-medium text-gray-900">{user?.email || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-700">Phone Number</p>
-                    {/* --- TAMBAHKAN OPTIONAL CHAINING --- */}
                     <p className="font-medium text-gray-900">{user?.countryCode} {user?.phoneNumber || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-700">Account Status</p>
                     <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mt-1">
-                      {/* --- TAMBAHKAN OPTIONAL CHAINING --- */}
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor()}`}>
                         {user?.status?.charAt(0).toUpperCase() + user?.status?.slice(1) || 'Unknown'}
                       </span>
@@ -67,7 +80,6 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Social Media</h3>
                 <div className="space-y-3">
-                  {/* --- TAMBAHKAN OPTIONAL CHAINING --- */}
                   {user?.instagram && (
                     <div>
                       <p className="text-sm font-medium text-gray-700">Instagram</p>
@@ -90,7 +102,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
               </div>
             </div>
             
-            {/* --- TAMBAHKAN OPTIONAL CHAINING --- */}
+            {/* --- NOTIFIKASI STATUS --- */}
             {user?.status === 'pending' && (
               <div className="mt-6 p-4 bg-yellow-50 border-l-4 border-yellow-400">
                 <div className="flex">
@@ -124,6 +136,36 @@ const ProfileView: React.FC<ProfileViewProps> = ({ user }) => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* --- KONTAINER UPDATE PERSONAL INFORMATION (BARU) --- */}
+        <div className="mt-6 border-t border-gray-200 pt-6">
+          <button 
+            onClick={() => setIsProfileFormOpen(!isProfileFormOpen)}
+            className="w-full md:w-auto px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+          >
+            {isProfileFormOpen ? 'Cancel Update' : 'Update Personal Information'}
+          </button>
+
+          <div className={`transition-all duration-500 ease-in-out ${isProfileFormOpen ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'} overflow-hidden`}>
+            <form onSubmit={handleProfileUpdate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <input 
+                  type="tel" 
+                  value={phoneNumber} 
+                  onChange={(e) => setPhoneNumber(e.target.value)} 
+                  className="w-full md:w-1/2 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900" 
+                />
+              </div>
+              <button 
+                type="submit" 
+                className="w-full md:w-auto px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+              >
+                Save Changes
+              </button>
+            </form>
           </div>
         </div>
       </div>
